@@ -1,0 +1,42 @@
+.footer {
+  width: 100%;
+  background-color: #000000; /* ⬅ TOTALMENTE NEGRO */
+  color: white;
+  padding: 25px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-left,
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.social-icon {
+  width: 35px;
+  height: 35px;
+  
+}
+
+.pse-logo {
+  width: 70px;
+}
+
+.footer-center {
+  text-align: center;
+}
+
+.email {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.politicas {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.8;
+}

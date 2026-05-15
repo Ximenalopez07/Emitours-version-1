@@ -1,0 +1,40 @@
+.lugares-container {
+  padding-top: 160px; /* aumentado para evitar que el navbar lo tape */}
+
+.lugar-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.lugar-card:hover {
+  transform: scale(1.02);
+}
+
+.lugar-card img {
+  width: 180px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.lugar-card h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.lugar-card p {
+  margin-top: 8px;
+  font-size: 15px;
+  color: #555;
+  line-height: 1.5;
+}
+
+

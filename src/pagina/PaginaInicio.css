@@ -1,0 +1,151 @@
+/* ================================
+   HERO → PANTALLA COMPLETA
+================================ */
+.hero-section {
+  height: 100vh;        /* 🔥 Ocupa TODA la pantalla */
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Oscurecer imagen del HERO */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+  max-width: 700px;
+  padding: 20px;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.hero-text {
+  font-size: 22px;
+  margin-bottom: 25px;
+}
+
+.hero-btn {
+  display: inline-block;
+  padding: 14px 30px;
+  background: #00b4d8;
+  color: white;
+  font-size: 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.hero-btn:hover {
+  background: #0090b5;
+}
+
+/* ================================
+   QUIÉNES SOMOS → PANTALLA COMPLETA
+================================ */
+.sobre-nosotros {
+  height: 100vh;   /* 🔥 También ocupa TODA la pantalla */
+  width: 100%;
+  background: #f8f9fa;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.sobre-contenido {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 50px;
+  max-width: 1200px;
+}
+
+/* Imagen del logo */
+.logo-sobre-nosotros {
+  width: 400px;
+  height: auto;
+}
+
+/* Texto */
+.texto-sobre-nosotros {
+  flex: 1;
+  font-size: 22px;
+  line-height: 1.6;
+}
+
+
+/* ================================
+   DESTACADOS
+================================ */
+.destacados {
+  padding: 60px 20px;
+  background: white;
+  text-align: center;
+}
+
+.destacados-grid {
+  max-width: 1200px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+
+.dest-card img {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+
+/* ================================
+   RESPONSIVE
+================================ */
+@media (max-width: 768px) {
+
+  .sobre-nosotros {
+    height: auto;
+    padding: 40px 20px;
+  }
+
+  .sobre-contenido {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .logo-sobre-nosotros {
+    width: 160px;
+  }
+
+  .hero-title {
+    font-size: 34px;
+  }
+
+  .hero-text {
+    font-size: 18px;
+  }
+
+  .destacados-grid {
+    grid-template-columns: 1fr;
+  }
+}

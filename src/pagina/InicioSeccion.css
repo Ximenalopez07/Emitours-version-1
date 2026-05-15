@@ -1,0 +1,92 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* FONDO QUE OCUPA TODA LA PANTALLA */
+.pagina-container {
+  width: 100vw;
+  height: 140vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 140px;
+  background-image: url('https://cdn.shopify.com/s/files/1/2083/8265/files/Comuna-13-Mural.jpg?v=1680889791');
+  background-size: cover;
+  background-position: center;
+}
+
+
+/* CAJA BLANCA */
+.caja {
+  width: 400px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 30px;
+  border-radius: 30px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+ 
+}
+
+/* TÍTULO */
+.titulo {
+  font-size: 32px;
+  color: #0d5380;
+  margin-bottom: 10px;
+}
+
+/* SUBTÍTULO */
+.subtitulo {
+  font-size: 15px;
+  opacity: 0.8;
+  margin-bottom: 25px;
+}
+
+/* FORMULARIOS */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* INPUTS */
+.formulario input,
+.formulario select {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+/* BOTÓN PRINCIPAL */
+.btn-principal {
+  padding: 12px;
+  background: #ff9500;
+  border: none;
+  color: white;
+  font-size: 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-principal:hover {
+  background: #e07f00;
+}
+
+/* BOTÓN SECUNDARIO */
+.btn-secundario {
+  margin-top: 20px;
+  padding: 10px;
+  background: transparent;
+  border: 2px solid #0d5380;
+  color: #0d5380;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn-secundario:hover {
+  background: #0d5380;
+  color: white;
+}

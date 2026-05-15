@@ -1,0 +1,56 @@
+/* NAVBAR AZUL DE PANTALLA COMPLETA */
+.custom-navbar {
+  background-color: #0048b7 !important; /* Azul elegante */
+  width: 100%;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  padding: 12px 0;
+}
+
+/* TÍTULO (Ruta Tours) */
+.brand-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: white !important;
+  letter-spacing: 1px;
+}
+
+/* ITEMS DEL MENÚ */
+.nav-item-link {
+  color: white !important;
+  font-size: 16px;
+  margin: 0 8px;
+  transition: 0.3s;
+}
+
+.nav-item-link:hover {
+  color: #93c5fd !important; /* azul claro */
+  transform: translateY(-2px);
+}
+
+/* BOTÓN INICIAR SESIÓN */
+.login-btn {
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 8px;
+  transition: 0.3s;
+}
+
+.login-btn:hover {
+  background-color: #dbeafe;
+  transform: scale(1.05);
+}
+
+
+.custom-toggler {
+  border-color: white !important;
+}
+
+.custom-toggler .navbar-toggler-icon {
+  filter: brightness(0) invert(1);
+}
+
+.navbar-logo {
+  width: 90px;
+  height: 75px;
+  object-fit: contain;
+}
