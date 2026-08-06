@@ -12,11 +12,17 @@ app.use(express.json());
 
 const usuarioRoutes = require('./routes/usuario.routes');
 const reservaRoutes = require('./routes/reserva.routes');
+const lugaresRoutes = require('./routes/lugares.routes');
+const guiasRoutes = require('./routes/guias.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 // ================= USAR RUTAS =================
 
 app.use('/usuarios', usuarioRoutes);
 app.use('/reservas', reservaRoutes);
+app.use('/lugares', lugaresRoutes);
+app.use('/guias', guiasRoutes);
+app.use('/admin', adminRoutes);
 
 // ================= RUTA BASE =================
 

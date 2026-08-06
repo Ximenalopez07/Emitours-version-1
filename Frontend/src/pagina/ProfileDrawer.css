@@ -1,0 +1,396 @@
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1040; /* Just below drawer */
+  animation: fadeIn 0.3s ease;
+}
+
+.profile-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  max-width: 100%;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.25);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #333;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.profile-drawer.dark {
+  background: rgba(25, 25, 25, 0.98);
+  color: #fff;
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+  border-left: 1px solid #333;
+}
+
+.drawer-header {
+  padding: 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.profile-drawer.dark .drawer-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drawer-header h2 {
+  font-size: 22px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 32px;
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.2s;
+}
+
+.close-btn:hover {
+  transform: scale(1.2);
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Sections */
+.drawer-section {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: background-color 0.3s;
+}
+
+.profile-drawer.dark .drawer-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.drawer-section h3 {
+  font-size: 16px;
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Avatar */
+.avatar-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.user-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #0048b7;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Profile Info */
+.profile-info {
+  text-align: center;
+}
+
+.profile-info h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.profile-info p {
+  font-size: 14px;
+  margin: 6px 0;
+  text-align: left;
+}
+
+.btn-edit {
+  margin-top: 15px;
+  background-color: #0048b7;
+  color: white;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-edit:hover {
+  background-color: #00378b;
+  border-color: transparent;
+}
+
+/* Forms */
+.profile-form, .password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.form-group input, .language-select {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  background: white;
+  color: #333;
+}
+
+.profile-drawer.dark .form-group input, 
+.profile-drawer.dark .language-select {
+  background: #2b2b2b;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-save, .btn-update-pass {
+  flex: 1;
+  background-color: #28a745;
+  color: white;
+  padding: 10px;
+  border: none;
+  font-weight: 600;
+}
+
+.btn-save:hover, .btn-update-pass:hover {
+  background-color: #218838;
+  border-color: transparent;
+}
+
+.btn-cancel {
+  flex: 1;
+  background-color: #dc3545;
+  color: white;
+  padding: 10px;
+  border: none;
+  font-weight: 600;
+}
+
+.btn-cancel:hover {
+  background-color: #c82333;
+  border-color: transparent;
+}
+
+/* Security list-buttons */
+.drawer-link-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+  text-align: left;
+  padding: 10px 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-weight: 500;
+  transition: padding-left 0.2s;
+}
+
+.profile-drawer.dark .drawer-link-btn {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.drawer-link-btn:hover {
+  padding-left: 6px;
+  color: #0048b7;
+}
+
+.profile-drawer.dark .drawer-link-btn:hover {
+  color: #93c5fd;
+}
+
+/* Connected Devices */
+.devices-list {
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.devices-list h4 {
+  font-size: 13px;
+  margin: 0 0 5px 0;
+  opacity: 0.7;
+}
+
+.device-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.device-icon {
+  font-size: 22px;
+}
+
+.device-name {
+  font-weight: 600;
+  margin: 0;
+}
+
+.device-meta {
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 0;
+}
+
+/* Logout Button */
+.btn-logout {
+  margin-top: 20px;
+  background-color: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  width: 100%;
+  padding: 10px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* Configuration Row */
+.config-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  font-size: 14px;
+}
+
+/* Slider switch for Theme */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+}
+
+input:checked + .slider {
+  background-color: #0048b7;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Delete Account Button */
+.btn-delete-account {
+  margin-top: 12px;
+  background-color: rgba(220, 53, 69, 0.05);
+  color: #dc3545;
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  width: 100%;
+  padding: 10px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+}
+
+.btn-delete-account:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+}

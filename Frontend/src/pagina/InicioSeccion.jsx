@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import "./inicioseccion.css";
 import { loginUsuario, registroUsuario } from "../api";
+import { UIContext } from "../context/UIContext";
 
 function InicioSeccion() {
+  const { setUser } = useContext(UIContext);
 
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
 
@@ -113,8 +115,15 @@ function InicioSeccion() {
       });
 
       if (res.data.status === "OK") {
-        localStorage.setItem("usuario", JSON.stringify(res.data.user));
-        alert("✅ Bienvenido " + res.data.user.nombre_usuario + "!");
+        if (res.data.type === "admin" && res.data.token) {
+          localStorage.setItem("adminToken", res.data.token);
+          alert("✅ Bienvenido Administrador " + res.data.admin.nombre + "!");
+          window.location.href = "/admin/dashboard";
+        } else {
+          setUser(res.data.user);
+          alert("✅ Bienvenido " + res.data.user.nombre_usuario + "!");
+          window.location.href = "/";
+        }
       } else {
         alert("❌ " + res.data.mensaje);
       }

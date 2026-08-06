@@ -70,16 +70,8 @@ const tours = [
       "Barrio Pablo Escobar que fue donado por él",
       "(130 mil por persona)",
     ],
-  },
-  {
-    id: 6,
-    title: "TOUR A METRO CABLE",
-    img: "https://www.metrodemedellin.gov.co/hs-fs/hubfs/IFE_0785%20%281%29.jpg?width=648&height=403&name=IFE_0785%20%281%29.jpg",
-    description: [
-      "También podemos visitar uno de los metro cables que tenemos en la ciudad de Medellín",
-      "(50 mil por persona)",
-    ],
-  },
+  }
+
 ];
 
 const reservas = () => {
@@ -121,7 +113,7 @@ const reservas = () => {
                 <li key={index}>{item}</li>
               ))}
             </ul>
-            <button 
+            <button
               className="btn-reservar"
               onClick={() => handleReservar(tour.title)}
             >

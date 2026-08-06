@@ -22,6 +22,9 @@ router.post('/', usuarioController.create);
 // PUT
 router.put('/:id', usuarioController.update);
 
+// PUT PASSWORD
+router.put('/:id/password', usuarioController.changePassword);
+
 // DELETE
 router.delete('/:id', usuarioController.delete);
 
