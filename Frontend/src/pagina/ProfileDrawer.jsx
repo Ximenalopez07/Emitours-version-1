@@ -2,18 +2,21 @@ import React, { useContext, useState } from "react";
 import { UIContext } from "../context/UIContext";
 import { translations } from "../utils/translations";
 import { updateUsuario, cambiarContrasena, deleteUsuario } from "../api";
+import PhoneInput from "../components/PhoneInput";
 import "./ProfileDrawer.css";
 
 export default function ProfileDrawer({ isOpen, onClose }) {
   const { user, setUser, theme, toggleTheme, language, setLanguage } = useContext(UIContext);
-  const t = translations[language];
+  const t = translations[language] || translations.es;
 
   // Profile Edit State
   const [isEditing, setIsEditing] = useState(false);
   const [nombre, setNombre] = useState(user?.nombre_usuario || "");
   const [correo, setCorreo] = useState(user?.correo_electronico || "");
-  const [telefono, setTelefono] = useState(user?.telefono || "");
+  const [telefonoE164, setTelefonoE164] = useState(user?.telefono || "");
+  const [isTelefonoValid, setIsTelefonoValid] = useState(true);
   const [foto, setFoto] = useState(user?.foto || "");
+  const [errorProfile, setErrorProfile] = useState(null);
 
   // Password Change State
   const [showPassForm, setShowPassForm] = useState(false);
@@ -26,13 +29,26 @@ export default function ProfileDrawer({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
+  const handlePhoneChange = ({ fullE164, isValid }) => {
+    setTelefonoE164(fullE164);
+    setIsTelefonoValid(isValid);
+    setErrorProfile(null);
+  };
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    setErrorProfile(null);
+
+    if (telefonoE164 && !isTelefonoValid) {
+      setErrorProfile(t.error_telefono_valido || "Ingresa un número de teléfono válido.");
+      return;
+    }
+
     try {
       const res = await updateUsuario(user.id_registro, {
         nombre_usuario: nombre,
         correo_electronico: correo,
-        telefono,
+        telefono: telefonoE164,
         foto,
         edad: user.edad,
         sexo: user.sexo
@@ -43,20 +59,21 @@ export default function ProfileDrawer({ isOpen, onClose }) {
         alert(t.exito_perfil);
       } else {
         alert(t.exito_perfil);
-        setUser({ ...user, nombre_usuario: nombre, correo_electronico: correo, telefono, foto });
+        setUser({ ...user, nombre_usuario: nombre, correo_electronico: correo, telefono: telefonoE164, foto });
       }
       setIsEditing(false);
     } catch (err) {
       console.error(err);
-      alert(t.error_perfil + (err.response?.data?.mensaje || err.message));
+      setErrorProfile(err.response?.data?.mensaje || err.message);
     }
   };
 
   const handleCancelProfile = () => {
     setNombre(user?.nombre_usuario || "");
     setCorreo(user?.correo_electronico || "");
-    setTelefono(user?.telefono || "");
+    setTelefonoE164(user?.telefono || "");
     setFoto(user?.foto || "");
+    setErrorProfile(null);
     setIsEditing(false);
   };
 
@@ -66,7 +83,7 @@ export default function ProfileDrawer({ isOpen, onClose }) {
       alert(t.error_pass_diferentes);
       return;
     }
-    if (nuevaContrasena.length < 6) {
+    if (nuevaContrasena.length < 8) {
       alert(t.error_pass_corta);
       return;
     }
@@ -89,6 +106,8 @@ export default function ProfileDrawer({ isOpen, onClose }) {
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("usuario");
     setUser(null);
     onClose();
     window.location.href = "/inicioseccion";
@@ -139,6 +158,11 @@ export default function ProfileDrawer({ isOpen, onClose }) {
               </div>
             ) : (
               <form onSubmit={handleSaveProfile} className="profile-form">
+                {errorProfile && (
+                  <div className="alerta-auth error" style={{ marginBottom: "12px" }}>
+                    {errorProfile}
+                  </div>
+                )}
                 <div className="form-group">
                   <label>{t.nombre}</label>
                   <input
@@ -159,11 +183,11 @@ export default function ProfileDrawer({ isOpen, onClose }) {
                 </div>
                 <div className="form-group">
                   <label>{t.telefono}</label>
-                  <input
-                    type="text"
-                    value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                    placeholder="Eje: +57 3001234567"
+                  <PhoneInput
+                    value={telefonoE164}
+                    onChange={handlePhoneChange}
+                    placeholder="Ej: 3018640872"
+                    defaultCountry="CO"
                   />
                 </div>
                 <div className="form-group">

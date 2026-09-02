@@ -1,0 +1,114 @@
+.phone-input-component {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.phone-input-row {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  background-color: #ffffff;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.phone-input-row:focus-within {
+  border-color: #0d5380;
+  box-shadow: 0 0 0 3px rgba(13, 83, 128, 0.15);
+}
+
+.phone-input-row.invalid {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2;
+}
+
+.phone-input-row.valid {
+  border-color: #16a34a;
+}
+
+/* CONTENEDOR SELECTOR DE PAÍS */
+.country-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #f1f5f9;
+  border-right: 1px solid #cbd5e1;
+  padding: 0 8px;
+  flex-shrink: 0;
+  max-width: 160px;
+}
+
+.selected-flag-preview {
+  font-size: 18px;
+  margin-right: 4px;
+  pointer-events: none;
+}
+
+.country-select {
+  border: none;
+  background: transparent;
+  padding: 12px 6px 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+  max-width: 130px;
+  text-overflow: ellipsis;
+}
+
+/* CONTENEDOR INPUT DE NÚMERO */
+.number-input-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  padding: 0 12px;
+  gap: 6px;
+}
+
+.dial-code-prefix {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0d5380;
+  user-select: none;
+}
+
+.phone-field {
+  width: 100%;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  padding: 12px 0 !important;
+  font-size: 15px !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.valid-icon {
+  color: #16a34a;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.phone-error-message {
+  font-size: 12.5px;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .country-select-wrapper {
+    max-width: 130px;
+  }
+  .country-select {
+    font-size: 13px;
+  }
+  .phone-field {
+    font-size: 14px !important;
+  }
+}

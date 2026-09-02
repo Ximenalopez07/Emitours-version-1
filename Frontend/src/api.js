@@ -4,19 +4,28 @@ const api = axios.create({
   baseURL: '/api', // Esto usará el proxy configurado en vite.config.js
 });
 
-// Interceptor para inyectar Token de Administrador en todas las peticiones
+// Interceptor para inyectar Token de Administrador o Usuario en todas las peticiones
 api.interceptors.request.use((config) => {
-  const adminToken = localStorage.getItem('adminToken');
-  if (adminToken) {
-    config.headers.Authorization = `Bearer ${adminToken}`;
+  const token = localStorage.getItem('adminToken') || localStorage.getItem('userToken') || localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, (error) => Promise.reject(error));
 
-export const getReservas = () => api.get('/reservas');
+export const getReservas = (params) => api.get('/reservas', { params });
 export const createReserva = (reservaData) => api.post('/reservas', reservaData);
 export const updateReserva = (id, reservaData) => api.put(`/reservas/${id}`, reservaData);
 export const deleteReserva = (id) => api.delete(`/reservas/${id}`);
+
+export const enviarContacto = (contactoData) => api.post('/contacto', contactoData);
+export const getAdminContacto = () => api.get('/contacto/admin');
+export const responderAdminContacto = (id, data) => api.put(`/contacto/admin/${id}/responder`, data);
+
+export const enviarMensajeChatbot = (mensajeData) => api.post('/chatbot/message', mensajeData);
+export const getAdminChatbotHistory = () => api.get('/chatbot/admin/history');
+export const getAdminChatbotConfig = () => api.get('/chatbot/admin/config');
+export const updateAdminChatbotConfig = (data) => api.put('/chatbot/admin/config', data);
 
 export const loginUsuario = (credenciales) => api.post('/usuarios/login', credenciales);
 export const registroUsuario = (userData) => api.post('/usuarios', userData);

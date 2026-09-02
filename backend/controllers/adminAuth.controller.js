@@ -11,39 +11,42 @@ exports.login = (req, res) => {
     return res.status(400).json({ status: 'ERROR', mensaje: 'Debes proporcionar correo y contraseña.' });
   }
 
-  const sql = "SELECT * FROM administradores WHERE correo = ?";
+  const sql = "SELECT * FROM registro_usuarios WHERE correo_electronico = ? AND rol = 'admin'";
   db.query(sql, [correo], async (err, result) => {
     if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
     
     if (result.length === 0) {
-      return res.status(401).json({ status: 'ERROR', mensaje: 'Credenciales administrativas inválidas.' });
+      return res.status(401).json({ status: 'ERROR', mensaje: 'Credenciales administrativas inválidas o el usuario no tiene rol de administrador.' });
     }
 
-    const admin = result[0];
-
-    if (admin.estado !== 'Activo') {
-      return res.status(403).json({ status: 'ERROR', mensaje: 'Tu cuenta administrativa está desactivada. Contacta al Super Administrador.' });
-    }
-
-    const isMatch = await bcrypt.compare(contrasena, admin.contrasena);
+    const user = result[0];
+    const isMatch = (contrasena === user.contrasena) || (await bcrypt.compare(contrasena, user.contrasena).catch(() => false));
     if (!isMatch) {
       return res.status(401).json({ status: 'ERROR', mensaje: 'Credenciales administrativas inválidas.' });
     }
 
+    const adminData = {
+      id: user.id_registro,
+      nombre: user.nombre_usuario,
+      apellido: '',
+      correo: user.correo_electronico,
+      rol: 'Super Administrador',
+      estado: 'Activo',
+      foto: user.foto,
+      telefono: user.telefono
+    };
+
     const token = jwt.sign(
-      { id: admin.id, correo: admin.correo, rol: admin.rol, nombre: admin.nombre },
+      { id: adminData.id, correo: adminData.correo, rol: adminData.rol, nombre: adminData.nombre },
       JWT_SECRET,
       { expiresIn: '12h' }
     );
-
-    // Quitar la contraseña de la respuesta
-    delete admin.contrasena;
 
     res.json({
       status: 'OK',
       mensaje: 'Inicio de sesión administrativo exitoso',
       token,
-      admin
+      admin: adminData
     });
   });
 };
@@ -51,18 +54,31 @@ exports.login = (req, res) => {
 // VERIFICAR SESIÓN ADMIN
 exports.verifySession = (req, res) => {
   const adminId = req.admin.id;
-  db.query("SELECT id, nombre, apellido, documento, correo, telefono, rol, estado, foto, fecha_creacion FROM administradores WHERE id = ?", [adminId], (err, result) => {
+  db.query("SELECT id_registro, nombre_usuario, correo_electronico, telefono, foto FROM registro_usuarios WHERE id_registro = ?", [adminId], (err, result) => {
     if (err || result.length === 0) {
       return res.status(404).json({ status: 'ERROR', mensaje: 'Administrador no encontrado' });
     }
-    res.json({ status: 'OK', admin: result[0] });
+    const u = result[0];
+    res.json({
+      status: 'OK',
+      admin: {
+        id: u.id_registro,
+        nombre: u.nombre_usuario,
+        apellido: '',
+        correo: u.correo_electronico,
+        telefono: u.telefono,
+        rol: 'Super Administrador',
+        estado: 'Activo',
+        foto: u.foto
+      }
+    });
   });
 };
 
 // RECUPERAR CONTRASEÑA (Solicitud / Simulación segura)
 exports.forgotPassword = (req, res) => {
   const { correo } = req.body;
-  db.query("SELECT id FROM administradores WHERE correo = ?", [correo], (err, result) => {
+  db.query("SELECT id_registro FROM registro_usuarios WHERE correo_electronico = ? AND rol = 'admin'", [correo], (err, result) => {
     if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.message });
     if (result.length === 0) {
       return res.status(404).json({ status: 'ERROR', mensaje: 'No existe ningún administrador registrado con este correo.' });
@@ -70,3 +86,4 @@ exports.forgotPassword = (req, res) => {
     res.json({ status: 'OK', mensaje: 'Se ha enviado una clave temporal a tu correo electrónico registrado.' });
   });
 };
+

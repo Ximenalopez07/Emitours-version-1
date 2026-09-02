@@ -1,133 +1,85 @@
-const Reserva = require('../models/reserva.model');
+const db = require('../config/db');
 
-// GET todas las reservas
-exports.getAll = (req, res) => {
+const Reserva = {
+  // Obtener todas las reservas
+  getAll: (callback) => {
+    const sql = `
+      SELECT 
+        r.id,
+        r.usuario_id,
+        r.lugar_id,
+        r.fecha,
+        r.hora,
+        r.numero_personas,
+        r.idioma,
+        r.precio_total,
+        r.metodo_pago,
+        r.estado_pago,
+        r.estado,
+        r.codigo,
+        r.fecha_creacion,
+        u.nombre_usuario,
+        u.correo_electronico,
+        u.telefono,
+        l.nombre as lugar_nombre
+      FROM reservas r
+      LEFT JOIN registro_usuarios u ON r.usuario_id = u.id_registro
+      LEFT JOIN lugares l ON r.lugar_id = l.id
+      ORDER BY r.id DESC
+    `;
+    db.query(sql, callback);
+  },
 
-  Reserva.getAll((err, result) => {
+  // Crear una nueva reserva con columnas explícitas
+  create: (data, callback) => {
+    const sql = `
+      INSERT INTO reservas (
+        usuario_id,
+        lugar_id,
+        fecha,
+        hora,
+        numero_personas,
+        idioma,
+        precio_total,
+        metodo_pago,
+        estado_pago,
+        estado,
+        codigo
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    db.query(sql, [
+      data.usuario_id,
+      data.lugar_id,
+      data.fecha,
+      data.hora,
+      data.numero_personas,
+      data.idioma || 'es',
+      data.precio_total,
+      data.metodo_pago || 'nequi',
+      data.estado_pago || 'pendiente',
+      data.estado || 'pendiente',
+      data.codigo
+    ], callback);
+  },
 
-    if (err) {
-      return res.status(500).json({
-        ok: false,
-        mensaje: "Error al obtener reservas",
-        error: err.message
-      });
-    }
+  // Actualizar reserva
+  update: (id, data, callback) => {
+    const sql = `
+      UPDATE reservas 
+      SET 
+        numero_personas = COALESCE(?, numero_personas),
+        estado = COALESCE(?, estado),
+        estado_pago = COALESCE(?, estado_pago)
+      WHERE id = ?
+    `;
+    db.query(sql, [data.numero_personas, data.estado, data.estado_pago, id], callback);
+  },
 
-    res.json({
-      ok: true,
-      data: result
-    });
-
-  });
-
-};
-
-// POST crear reserva
-exports.create = (req, res) => {
-
-  const {
-    usuario_id,
-    fecha,
-    hora,
-    numero_personas,
-    estado
-  } = req.body;
-
-  // VALIDACIÓN
-  if (!usuario_id || !fecha || !hora) {
-
-    return res.status(400).json({
-      ok: false,
-      mensaje: "Faltan campos obligatorios"
-    });
-
+  // Eliminar reserva
+  delete: (id, callback) => {
+    db.query("DELETE FROM reservas WHERE id = ?", [id], callback);
   }
-
-  Reserva.create(req.body, (err, result) => {
-
-    if (err) {
-
-      return res.status(500).json({
-        ok: false,
-        mensaje: "Error al crear reserva",
-        error: err.message
-      });
-
-    }
-
-    res.status(201).json({
-      ok: true,
-      mensaje: "Reserva creada",
-      id: result.insertId
-    });
-
-  });
-
 };
 
-// PUT actualizar reserva
-exports.update = (req, res) => {
-
-  const { id } = req.params;
-
-  const {
-    numero_personas,
-    estado
-  } = req.body;
-
-  // VALIDACIÓN
-  if (!numero_personas) {
-
-    return res.status(400).json({
-      ok: false,
-      mensaje: "Debe indicar número de personas"
-    });
-
-  }
-
-  Reserva.update(id, req.body, (err) => {
-
-    if (err) {
-
-      return res.status(500).json({
-        ok: false,
-        mensaje: "Error al actualizar reserva",
-        error: err.message
-      });
-
-    }
-
-    res.json({
-      ok: true,
-      mensaje: "Reserva actualizada"
-    });
-
-  });
-
-};
-
-// DELETE eliminar reserva
-exports.delete = (req, res) => {
-
-  const { id } = req.params;
-
-  Reserva.delete(id, (err) => {
-
-    if (err) {
-
-      return res.status(500).json({
-        ok: false,
-        mensaje: "Error al eliminar reserva",
-        error: err.message
-      });
-
-    }
-
-    res.json({
-      ok: true,
-      mensaje: "Reserva eliminada"
-    });
-
-  });
-
-};
+module.exports = Reserva;

@@ -7,83 +7,206 @@
 /* FONDO QUE OCUPA TODA LA PANTALLA */
 .pagina-container {
   width: 100vw;
-  height: 140vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 140px;
+  align-items: center;
+  padding-top: 100px;
+  padding-bottom: 60px;
   background-image: url('https://cdn.shopify.com/s/files/1/2083/8265/files/Comuna-13-Mural.jpg?v=1680889791');
   background-size: cover;
   background-position: center;
 }
 
-
-/* CAJA BLANCA */
+/* CAJA BLANCA CON CRISTALIZACIÓN */
 .caja {
-  width: 400px;
-  background: rgba(255, 255, 255, 0.92);
-  padding: 30px;
-  border-radius: 30px;
+  width: 100%;
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 35px 30px;
+  border-radius: 24px;
   text-align: center;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
- 
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
 }
 
 /* TÍTULO */
 .titulo {
-  font-size: 32px;
+  font-size: 28px;
+  font-weight: 700;
   color: #0d5380;
-  margin-bottom: 10px;
-}
-
-/* SUBTÍTULO */
-.subtitulo {
-  font-size: 15px;
-  opacity: 0.8;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
 }
 
 /* FORMULARIOS */
 .formulario {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  text-align: left;
 }
 
-/* INPUTS */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* INPUTS & SELECTS */
 .formulario input,
 .formulario select {
-  padding: 12px;
-  border: 1px solid #ccc;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #cbd5e1;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 15px;
+  background-color: #ffffff;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.formulario input:focus,
+.formulario select:focus {
+  border-color: #0d5380;
+  box-shadow: 0 0 0 3px rgba(13, 83, 128, 0.15);
+}
+
+.formulario input.input-invalid,
+.formulario select.input-invalid {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2;
+}
+
+/* CAMPO CONTRASEÑA CON BOTÓN DE OJO */
+.password-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field-wrapper input {
+  padding-right: 44px;
+}
+
+.btn-eye-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+
+.btn-eye-toggle:hover {
+  color: #0d5380;
+}
+
+/* TEXTO DE ERROR DEBAJO DEL CAMPO */
+.field-error-text {
+  font-size: 12.5px;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* REGLAS DE CONTRASEÑA EN TIEMPO REAL */
+.password-rules-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.password-rule-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.password-rule-item.valid {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+/* ALERTAS GENERALES */
+.alerta-auth {
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.alerta-auth.error {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.alerta-auth.exito {
+  background-color: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
 }
 
 /* BOTÓN PRINCIPAL */
 .btn-principal {
-  padding: 12px;
+  width: 100%;
+  padding: 14px;
   background: #ff9500;
   border: none;
   color: white;
-  font-size: 18px;
+  font-size: 16.5px;
+  font-weight: 700;
   border-radius: 10px;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 8px;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
-.btn-principal:hover {
+.btn-principal:hover:not(:disabled) {
   background: #e07f00;
+  transform: translateY(-1px);
+}
+
+.btn-principal:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
 }
 
 /* BOTÓN SECUNDARIO */
 .btn-secundario {
-  margin-top: 20px;
-  padding: 10px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 12px;
   background: transparent;
   border: 2px solid #0d5380;
   color: #0d5380;
+  font-size: 15px;
+  font-weight: 600;
   border-radius: 10px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .btn-secundario:hover {

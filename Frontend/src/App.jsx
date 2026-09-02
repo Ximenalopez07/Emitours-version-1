@@ -26,6 +26,8 @@ import AdminReportes from "./admin/AdminReportes";
 import AdminConfiguracion from "./admin/AdminConfiguracion";
 import AdminPerfil from "./admin/AdminPerfil";
 
+import WhatsAppButton from "./components/WhatsAppButton";
+
 function MainApp() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -68,6 +70,7 @@ function MainApp() {
       </div>
 
       {!isAdminRoute && <Barra />}
+      {!isAdminRoute && <WhatsAppButton />}
     </div>
   );
 }

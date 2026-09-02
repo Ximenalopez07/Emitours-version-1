@@ -1,80 +1,687 @@
-.reservas-container {
-  max-width: 900px;
+/* ===================================================
+   PÁGINA DE RESERVAS - ESTILOS VISUALES EMITOURS
+   =================================================== */
+
+.reservas-pagina {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 150px 20px 40px; /* espacio arriba para que no tape la barra */
-  font-family: "Poppins", sans-serif;
-  color: #222;
+  padding: 110px 20px 60px;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #374151;
+  background-color: #ffffff;
+  min-height: calc(100vh - 120px);
 }
 
-.tour-item {
-  display: flex;
-  gap: 25px;
-  margin-bottom: 50px;
-  align-items: flex-start;
+/* ===================================================
+   HEADER BANNER
+   =================================================== */
+.reservas-header-banner,
+.reservas-header {
+  text-align: center;
+  margin-bottom: 40px;
 }
 
-.tour-img {
-  width: 140px;
-  height: 140px;
-  object-fit: cover;
-  border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(0, 102, 255, 0.15);
-  flex-shrink: 0;
-  border: 4px solid #1e73ff; /* borde azul */
+.reservas-header-banner h1,
+.reservas-header h1 {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #1e3a5f;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
 }
 
-.tour-content {
-  flex: 1;
+.reservas-header-banner p,
+.reservas-header p {
+  color: #64748b;
+  font-size: 1.1rem;
+  max-width: 650px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
-.tour-title {
+/* ===================================================
+   ALERTAS
+   =================================================== */
+.alerta-exito-reserva {
+  background: #ecfdf5;
+  border: 1px solid #10b981;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  text-align: center;
+  color: #065f46;
+}
+
+.alerta-exito-reserva h3 {
+  color: #047857;
+  font-size: 1.25rem;
+  margin-bottom: 8px;
   font-weight: 700;
-  font-size: 18px;
-  margin-bottom: 15px;
-  color: #0047ff;
 }
 
-.tour-description {
-  list-style-type: disc;
-  padding-left: 20px;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 20px;
-  color: #333;
-}
-
-.btn-reservar {
-  background: linear-gradient(90deg, #0055ff, #3399ff);
-  border: none;
-  padding: 10px 24px;
-  color: white;
+.alerta-error-form {
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  color: #b91c1c;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  margin-bottom: 18px;
+  text-align: center;
   font-weight: 600;
-  border-radius: 14px;
+}
+
+.estado-badge-pendiente {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-top: 10px;
+}
+
+.btn-cerrar-alerta {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s ease;
+  margin-top: 12px;
+  transition: background 0.2s ease;
 }
 
-.btn-reservar:hover {
-  background: linear-gradient(90deg, #0040cc, #1a75ff);
+.btn-cerrar-alerta:hover {
+  background: #059669;
 }
 
-/* Responsive */
-@media (max-width: 720px) {
-  .tour-item {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .tour-img {
-    width: 100%;
-    max-width: 300px;
-    height: auto;
-    margin-bottom: 15px;
-  }
-
-  .tour-content {
-    width: 100%;
-  }
+/* ===================================================
+   GRID DE CARDS DE TOURS / LUGARES
+   =================================================== */
+.tours-grid-container,
+.tours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+  margin-bottom: 60px;
 }
 
+.tour-card-reserva,
+.tour-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.tour-card-reserva:hover,
+.tour-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
+  border-color: #93c5fd;
+}
+
+/* IMAGEN DEL TOUR Y BADGE */
+.tour-card-imagen,
+.tour-img-container {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  background-color: #f1f5f9;
+}
+
+.tour-card-imagen img,
+.tour-img-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.tour-card-reserva:hover .tour-card-imagen img,
+.tour-card:hover .tour-img-container img {
+  transform: scale(1.05);
+}
+
+.cupos-tag,
+.badge-limite {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* CUERPO DEL CARD */
+.tour-card-body,
+.tour-info {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #ffffff;
+}
+
+.tour-card-body h3,
+.tour-info h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+}
+
+.tour-desc {
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.55;
+  margin-bottom: 16px;
+  flex-grow: 1;
+}
+
+.tour-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 0.95rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.tour-precio {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #2563eb;
+}
+
+.tour-duracion {
+  font-size: 0.95rem;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.tour-precio strong {
+  color: #2563eb;
+  font-size: 1.15rem;
+}
+
+.tour-detalles {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.45;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tour-detalles::before {
+  content: "✨";
+  font-size: 0.9rem;
+}
+
+/* BOTÓN DE RESERVAR */
+.btn-reservar-tour {
+  width: 100%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+  text-align: center;
+}
+
+.btn-reservar-tour:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ===================================================
+   MODALES (FORMULARIO Y ÉXITO)
+   =================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 20px;
+}
+
+.modal-reserva {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+  color: #374151;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 14px;
+}
+
+.modal-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 0;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.btn-close:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+/* FORMULARIO */
+.form-reserva-redisenado label {
+  display: block;
+  font-size: 0.88rem;
+  color: #334155;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.form-reserva-redisenado input,
+.form-reserva-redisenado select {
+  width: 100%;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  color: #1e293b;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-reserva-redisenado input:focus,
+.form-reserva-redisenado select:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.help-text {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: block;
+  margin-top: 4px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.opciones-pago-radio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.radio-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  color: #334155;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.radio-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.radio-card.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.total-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f0fdf4;
+  border: 1.5px dashed #10b981;
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-top: 22px;
+  margin-bottom: 20px;
+}
+
+.total-preview span {
+  color: #065f46;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.total-preview strong {
+  color: #047857;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.resumen-pago-caja {
+  background: #f0fdf4;
+  border: 1px dashed #10b981;
+  padding: 15px;
+  border-radius: 12px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.resumen-pago-caja span {
+  color: #065f46;
+  font-size: 0.9rem;
+}
+
+.resumen-pago-caja h3 {
+  color: #047857;
+  font-size: 1.5rem;
+  margin-top: 4px;
+}
+
+.modal-acciones {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.btn-cancelar {
+  flex: 1;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancelar:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.btn-confirmar-reserva,
+.btn-confirmar-modal {
+  width: 100%;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+  margin-top: 10px;
+}
+
+.btn-confirmar-reserva:hover,
+.btn-confirmar-modal:hover {
+  background: #1d4ed8;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+}
+
+/* ===================================================
+   MODAL ÉXITO ESPECÍFICO
+   =================================================== */
+.exito-card {
+  text-align: center;
+}
+
+.exito-card h2 {
+  color: #047857;
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.codigo-box {
+  background: #eff6ff;
+  border: 1.5px dashed #2563eb;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.codigo-box span {
+  font-size: 0.85rem;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.codigo-box strong {
+  font-size: 1.4rem;
+  color: #1e3a5f;
+  letter-spacing: 1px;
+}
+
+.resumen-detalles {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.resumen-detalles p {
+  margin: 8px 0;
+  font-size: 0.92rem;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 6px;
+}
+
+.resumen-detalles p:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.estado-badge {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* ===================================================
+   TABLA HISTORIAL DE RESERVAS (USUARIO)
+   =================================================== */
+.mis-reservas-seccion,
+.historial-reservas-seccion {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  margin-top: 50px;
+}
+
+.mis-reservas-seccion h2,
+.historial-reservas-seccion h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.tabla-historial-wrapper {
+  overflow-x: auto;
+}
+
+.tabla-historial {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tabla-historial th,
+.tabla-historial td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.88rem;
+  color: #334155;
+}
+
+.tabla-historial th {
+  color: #64748b;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  background: #f8fafc;
+}
+
+.codigo-tag {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #dbeafe;
+}
+
+.estado-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.estado-pill.pendiente {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.estado-pill.confirmada {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.estado-pill.rechazada,
+.estado-pill.cancelada {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.estado-pill.pagado {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.estado-pill.pagar-despues {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+/* ===================================================
+   RESPONSIVE
+   =================================================== */
+@media (max-width: 768px) {
+  .reservas-pagina {
+    padding-top: 90px;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .reservas-header-banner h1,
+  .reservas-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tours-grid-container,
+  .tours-grid {
+    grid-template-columns: 1fr;
+  }
+}

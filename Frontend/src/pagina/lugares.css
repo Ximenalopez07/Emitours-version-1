@@ -1,40 +1,135 @@
-.lugares-container {
-  padding-top: 160px; /* aumentado para evitar que el navbar lo tape */}
-
-.lugar-card {
+.lugares-page-container {
+  min-height: calc(100vh - 120px);
+  background-color: #f8fafc;
+  padding-top: 120px; /* espacio para la navbar fija */
+  padding-bottom: 60px;
   display: flex;
-  align-items: flex-start;
+  justify-content: center;
+}
+
+.lugares-content {
+  width: 100%;
+  max-width: 1100px;
+  padding: 0 20px;
+}
+
+.lugares-header {
+  margin-bottom: 30px;
+}
+
+.lugares-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.lugares-title-icon {
+  font-size: 34px;
+  color: #1e3a8a;
+}
+
+.lugares-subtitle {
+  font-size: 15px;
+  color: #64748b;
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+.lugares-list {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
-  background: #ffffff;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
+}
+
+/* TARJETA ENCUADRADA (IDÉNTICA A GUÍAS) */
+.lugar-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lugar-card:hover {
-  transform: scale(1.02);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-.lugar-card img {
-  width: 180px;
-  height: 180px;
+.lugar-photo-container {
+  flex-shrink: 0;
+}
+
+.lugar-photo {
+  width: 130px;
+  height: 130px;
+  border-radius: 12px;
   object-fit: cover;
-  border-radius: 10px;
 }
 
-.lugar-card h2 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
+.lugar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
-.lugar-card p {
-  margin-top: 8px;
-  font-size: 15px;
-  color: #555;
+.lugar-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.lugar-description {
+  font-size: 14.5px;
+  color: #475569;
   line-height: 1.5;
+  margin: 0;
 }
 
+.lugar-details-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
 
+.lugar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lugar-badge.price {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.badge-icon {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 576px) {
+  .lugar-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .lugar-photo {
+    width: 100%;
+    height: 200px;
+  }
+}

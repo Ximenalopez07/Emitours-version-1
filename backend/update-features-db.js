@@ -3,23 +3,30 @@ const db = require('./config/db');
 async function updateSchema() {
   console.log('Iniciando actualización de esquema para Reservas, Contacto y ChatBot IA...');
 
-  // 1. Modificar tabla lugares para incluir cupos_disponibles, capacidad_maxima, horarios, etc.
+  // 1. Modificar tabla lugares
   const lugaresCols = await new Promise((res, rej) => db.query('DESCRIBE lugares', (err, r) => err ? rej(err) : res(r)));
   const lCols = lugaresCols.map(c => c.Field);
 
   if (!lCols.includes('cupos_disponibles')) await new Promise((res, rej) => db.query('ALTER TABLE lugares ADD COLUMN cupos_disponibles INT DEFAULT 20', (e, r) => e ? rej(e) : res(r)));
   if (!lCols.includes('capacidad_maxima')) await new Promise((res, rej) => db.query('ALTER TABLE lugares ADD COLUMN capacidad_maxima INT DEFAULT 20', (e, r) => e ? rej(e) : res(r)));
-  if (!lCols.includes('horarios_disponibles')) await new Promise((res, rej) => db.query('ALTER TABLE lugares ADD COLUMN horarios_disponibles JSON', (e, r) => e ? rej(e) : res(r)));
-
-  // Actualizar valores por defecto para horarios en lugares
-  await new Promise((res, rej) => db.query(`UPDATE lugares SET horarios_disponibles = '["08:00 AM", "10:00 AM", "02:00 PM", "04:00 PM"]' WHERE horarios_disponibles IS NULL`, (e, r) => e ? rej(e) : res(r)));
+  if (!lCols.includes('horarios_disponibles')) await new Promise((res, rej) => db.query("ALTER TABLE lugares ADD COLUMN horarios_disponibles TEXT", (e, r) => e ? rej(e) : res(r)));
 
   // 2. Modificar tabla reservas
   const reservasCols = await new Promise((res, rej) => db.query('DESCRIBE reservas', (err, r) => err ? rej(err) : res(r)));
   const rCols = reservasCols.map(c => c.Field);
 
+  await new Promise((res, rej) => db.query('ALTER TABLE reservas MODIFY COLUMN hora VARCHAR(50)', (e, r) => e ? rej(e) : res(r)));
   if (!rCols.includes('nombre_completo')) await new Promise((res, rej) => db.query('ALTER TABLE reservas ADD COLUMN nombre_completo VARCHAR(150)', (e, r) => e ? rej(e) : res(r)));
   if (!rCols.includes('celular')) await new Promise((res, rej) => db.query('ALTER TABLE reservas ADD COLUMN celular VARCHAR(30)', (e, r) => e ? rej(e) : res(r)));
+  if (!rCols.includes('metodo_pago')) await new Promise((res, rej) => db.query("ALTER TABLE reservas ADD COLUMN metodo_pago VARCHAR(50) DEFAULT 'Nequi'", (e, r) => e ? rej(e) : res(r)));
+  if (!rCols.includes('codigo')) await new Promise((res, rej) => db.query('ALTER TABLE reservas ADD COLUMN codigo VARCHAR(50)', (e, r) => e ? rej(e) : res(r)));
+  if (!rCols.includes('lugar_id')) await new Promise((res, rej) => db.query('ALTER TABLE reservas ADD COLUMN lugar_id INT DEFAULT 1', (e, r) => e ? rej(e) : res(r)));
+  if (!rCols.includes('precio_total')) await new Promise((res, rej) => db.query('ALTER TABLE reservas ADD COLUMN precio_total DECIMAL(10,2) DEFAULT 150000', (e, r) => e ? rej(e) : res(r)));
+  if (!rCols.includes('opcion_pago')) await new Promise((res, rej) => db.query("ALTER TABLE reservas ADD COLUMN opcion_pago VARCHAR(100) DEFAULT 'Pagar ahora'", (e, r) => e ? rej(e) : res(r)));
+  if (!rCols.includes('estado_pago')) await new Promise((res, rej) => db.query("ALTER TABLE reservas ADD COLUMN estado_pago VARCHAR(50) DEFAULT 'Pendiente'", (e, r) => e ? rej(e) : res(r)));
+
+  // Asignar códigos a reservas si no tienen
+  await new Promise((res, rej) => db.query(`UPDATE reservas SET codigo = CONCAT('RES-', id, '-', FLOOR(1000 + RAND() * 9000)) WHERE codigo IS NULL OR codigo = ''`, (e, r) => e ? rej(e) : res(r)));
 
   // 3. Crear tabla mensajes_contacto
   await new Promise((res, rej) => db.query(`
@@ -52,13 +59,8 @@ async function updateSchema() {
       id INT PRIMARY KEY DEFAULT 1,
       activo TINYINT(1) DEFAULT 1,
       mensaje_bienvenida TEXT,
-      faq JSON
+      faq TEXT
     )
-  `, (e, r) => e ? rej(e) : res(r)));
-
-  await new Promise((res, rej) => db.query(`
-    INSERT IGNORE INTO chatbot_config (id, activo, mensaje_bienvenida)
-    VALUES (1, 1, '¡Hola! Soy el Asistente Virtual IA de EmiTours. ¿En qué te puedo ayudar hoy?')
   `, (e, r) => e ? rej(e) : res(r)));
 
   console.log('✅ ESQUEMA DE BASE DE DATOS ACTUALIZADO CORRECTAMENTE');

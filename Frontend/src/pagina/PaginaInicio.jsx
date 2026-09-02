@@ -1,8 +1,14 @@
+import React, { useContext } from "react";
+import { UIContext } from "../context/UIContext";
+import { translations } from "../utils/translations";
 import "./PaginaInicio.css";
 import heroImg from "../assets/comuna13.jpg";
 import logo from "../assets/logo.jpg"; // <-- Logo
 
 function PaginaInicio() {
+  const { language } = useContext(UIContext);
+  const t = translations[language] || translations.es;
+
   return (
     <div className="home">
 
@@ -14,12 +20,9 @@ function PaginaInicio() {
         <div className="overlay"></div>
 
         <div className="hero-content">
-          <h1 className="hero-title">Descubre Medellín con EmiTours</h1>
-          <p className="hero-text">
-            Explora la ciudad de la eterna primavera de una forma única:
-            cultura, historia, aventura y los lugares más icónicos de Medellín.
-          </p>
-          <a href="/lugares" className="hero-btn">Ver Tours</a>
+          <h1 className="hero-title">{t.hero_titulo}</h1>
+          <p className="hero-text">{t.hero_subtitulo}</p>
+          <a href="/lugares" className="hero-btn">{t.explorar_tours}</a>
         </div>
       </section>
 
@@ -37,12 +40,8 @@ function PaginaInicio() {
 
           {/* TEXTO AL LADO */}
           <div className="texto-sobre-nosotros">
-            <h2>¿Quiénes Somos?</h2>
-            <p>
-              Somos una agencia turística apasionada por contar la historia real de Medellín.
-              Nuestros guías locales convertirán cada recorrido en una experiencia auténtica,
-              segura y llena de cultura. ¡Viajar con EmiTours es viajar con familia!
-            </p>
+            <h2>{t.quienes_somos}</h2>
+            <p>{t.quienes_somos_desc}</p>
           </div>
 
         </div>
