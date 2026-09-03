@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import "./inicioseccion.css";
+import "./InicioSeccion.css";
 import { loginUsuario, registroUsuario } from "../api";
 import { UIContext } from "../context/UIContext";
 import { translations } from "../utils/translations";
