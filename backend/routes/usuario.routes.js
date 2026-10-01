@@ -32,8 +32,20 @@ const rateLimitLogin = (req, res, next) => {
   next();
 };
 
-// ================= LOGIN =================
+// ================= LOGIN Y AUTENTICACIÓN GOOGLE =================
 router.post('/login', rateLimitLogin, usuarioController.login);
+router.post('/google-login', usuarioController.googleLogin);
+router.post('/google-register-init', usuarioController.googleRegisterInit);
+router.post('/google-register', usuarioController.googleRegister);
+router.post('/google-auth', usuarioController.googleLogin);
+
+// ================= VERIFICACIÓN DE CORREO =================
+router.post('/verificar-correo', usuarioController.verificarCorreo);
+router.post('/reenviar-codigo', usuarioController.reenviarCodigoVerificacion);
+
+// ================= RECUPERACIÓN DE CONTRASEÑA =================
+router.post('/solicitar-recuperacion', rateLimitLogin, usuarioController.solicitarRecuperacion);
+router.post('/restablecer-contrasena', usuarioController.restablecerContrasena);
 
 // ================= CRUD =================
 router.get('/', usuarioController.getAll);

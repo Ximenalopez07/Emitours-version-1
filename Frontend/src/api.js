@@ -28,7 +28,15 @@ export const getAdminChatbotConfig = () => api.get('/chatbot/admin/config');
 export const updateAdminChatbotConfig = (data) => api.put('/chatbot/admin/config', data);
 
 export const loginUsuario = (credenciales) => api.post('/usuarios/login', credenciales);
+export const googleLoginUsuario = (tokenData) => api.post('/usuarios/google-login', tokenData);
+export const googleRegisterInitUsuario = (tokenData) => api.post('/usuarios/google-register-init', tokenData);
+export const googleRegisterUsuario = (userData) => api.post('/usuarios/google-register', userData);
+export const googleAuthUsuario = (tokenData) => api.post('/usuarios/google-login', tokenData);
 export const registroUsuario = (userData) => api.post('/usuarios', userData);
+export const verificarCorreoUsuario = (data) => api.post('/usuarios/verificar-correo', data);
+export const reenviarCodigoVerificacion = (data) => api.post('/usuarios/reenviar-codigo', data);
+export const solicitarRecuperacionPassword = (data) => api.post('/usuarios/solicitar-recuperacion', data);
+export const restablecerContrasena = (data) => api.post('/usuarios/restablecer-contrasena', data);
 export const updateUsuario = (id, userData) => api.put(`/usuarios/${id}`, userData);
 export const cambiarContrasena = (id, passwordData) => api.put(`/usuarios/${id}/password`, passwordData);
 export const deleteUsuario = (id) => api.delete(`/usuarios/${id}`);
@@ -43,6 +51,7 @@ export const getAdminStats = () => api.get('/admin/stats');
 
 export const getAdminUsuarios = () => api.get('/admin/usuarios');
 export const updateAdminUsuario = (id, data) => api.put(`/admin/usuarios/${id}`, data);
+export const deleteAdminUsuario = (id) => api.delete(`/admin/usuarios/${id}`);
 
 export const getAdminAdministradores = () => api.get('/admin/administradores');
 export const createAdminAdministrador = (data) => api.post('/admin/administradores', data);
@@ -54,6 +63,11 @@ export const createAdminLugar = (data) => api.post('/admin/lugares', data);
 export const updateAdminLugar = (id, data) => api.put(`/admin/lugares/${id}`, data);
 export const deleteAdminLugar = (id) => api.delete(`/admin/lugares/${id}`);
 
+export const getAdminGuias = () => api.get('/admin/guias');
+export const createAdminGuia = (data) => api.post('/admin/guias', data);
+export const updateAdminGuia = (id, data) => api.put(`/admin/guias/${id}`, data);
+export const deleteAdminGuia = (id) => api.delete(`/admin/guias/${id}`);
+
 export const getAdminCategorias = () => api.get('/admin/categorias');
 export const createAdminCategoria = (data) => api.post('/admin/categorias', data);
 export const updateAdminCategoria = (id, data) => api.put(`/admin/categorias/${id}`, data);
@@ -61,6 +75,8 @@ export const deleteAdminCategoria = (id) => api.delete(`/admin/categorias/${id}`
 
 export const getAdminReservas = () => api.get('/admin/reservas');
 export const updateAdminReservaStatus = (id, data) => api.put(`/admin/reservas/${id}/estado`, data);
+export const updateAdminReserva = (id, data) => api.put(`/admin/reservas/${id}`, data);
+export const deleteAdminReserva = (id) => api.delete(`/admin/reservas/${id}`);
 
 export const getAdminPagos = () => api.get('/admin/pagos');
 

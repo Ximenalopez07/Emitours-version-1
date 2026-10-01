@@ -3,6 +3,8 @@ import { getLugares } from "../api";
 import { UIContext } from "../context/UIContext";
 import { translations } from "../utils/translations";
 import { FaMapMarkerAlt } from "react-icons/fa";
+import { resolveLugarPhoto } from "../utils/assetHelper";
+import { obtenerConfigTour } from "./reservas";
 import "./lugares.css";
 
 export default function Lugares() {
@@ -21,10 +23,10 @@ export default function Lugares() {
       })
       .catch((err) => {
         console.error("Error al cargar los lugares:", err);
-        setError("No se pudieron cargar los lugares turísticos.");
+        setError(language === 'en' ? 'Could not load tourist places.' : 'No se pudieron cargar los lugares turísticos.');
         setLoading(false);
       });
-  }, []);
+  }, [language]);
 
   if (loading) {
     return (
@@ -32,9 +34,9 @@ export default function Lugares() {
         <div className="lugares-content">
           <div className="text-center py-5">
             <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Cargando...</span>
+              <span className="visually-hidden">{language === 'en' ? 'Loading...' : 'Cargando...'}</span>
             </div>
-            <p className="mt-2 text-muted">Cargando lugares...</p>
+            <p className="mt-2 text-muted">{language === 'en' ? 'Loading places...' : 'Cargando lugares...'}</p>
           </div>
         </div>
       </div>
@@ -66,22 +68,29 @@ export default function Lugares() {
 
         {/* Lista de tarjetas de lugares (únicamente foto, título y descripción encerrados en su cuadrito) */}
         <div className="lugares-list">
-          {listaLugares.map((lugar) => (
-            <div key={lugar.id} className="lugar-card">
-              <div className="lugar-photo-container">
-                <img
-                  src={lugar.imagen || lugar.img || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300"}
-                  alt={lugar.nombre}
-                  className="lugar-photo"
-                />
-              </div>
+          {listaLugares.map((lugar) => {
+            const config = obtenerConfigTour(lugar.nombre);
+            const descripcionMostrada = language === 'en' && config?.descripcion_en
+              ? config.descripcion_en
+              : lugar.descripcion;
 
-              <div className="lugar-info">
-                <h3 className="lugar-name">{lugar.nombre}</h3>
-                <p className="lugar-description">{lugar.descripcion}</p>
+            return (
+              <div key={lugar.id} className="lugar-card">
+                <div className="lugar-photo-container">
+                  <img
+                    src={resolveLugarPhoto(lugar.imagen || lugar.img, lugar.nombre)}
+                    alt={lugar.nombre}
+                    className="lugar-photo"
+                  />
+                </div>
+
+                <div className="lugar-info">
+                  <h3 className="lugar-name">{lugar.nombre}</h3>
+                  <p className="lugar-description">{descripcionMostrada}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

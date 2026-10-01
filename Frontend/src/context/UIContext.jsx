@@ -22,8 +22,23 @@ export const UIProvider = ({ children }) => {
       setUserState(userData);
     } else {
       localStorage.removeItem("usuario");
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("token");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("userRole");
+      sessionStorage.clear();
       setUserState(null);
     }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("usuario");
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("token");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("userRole");
+    sessionStorage.clear();
+    setUserState(null);
   };
 
   const toggleTheme = () => {
@@ -51,6 +66,7 @@ export const UIProvider = ({ children }) => {
       value={{
         user,
         setUser,
+        logout,
         theme,
         toggleTheme,
         language,

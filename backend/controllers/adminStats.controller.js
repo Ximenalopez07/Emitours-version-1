@@ -3,94 +3,100 @@ const db = require('../config/db');
 // OBTENER ESTADÍSTICAS Y MÉTRICAS REALES DEL DASHBOARD
 exports.getDashboardStats = async (req, res) => {
   try {
-    const p = (query) => new Promise((resolve, reject) => {
-      db.query(query, (err, results) => err ? reject(err) : resolve(results));
+    const p = (query, params = []) => new Promise((resolve, reject) => {
+      db.query(query, params, (err, results) => err ? reject(err) : resolve(results));
     });
 
-    // 1. Tarjetas Estadísticas
-    const totalUsuariosRes = await p("SELECT COUNT(*) as count FROM registro_usuarios");
-    const usuariosNuevosMesRes = await p("SELECT COUNT(*) as count FROM registro_usuarios WHERE MONTH(CURRENT_DATE()) = MONTH(CURRENT_DATE())"); // Ajustado
-    const totalReservasRes = await p("SELECT COUNT(*) as count FROM reservas");
-    const reservasConfirmadasRes = await p("SELECT COUNT(*) as count FROM reservas WHERE LOWER(estado) IN ('confirmada', 'activa')");
-    const reservasPendientesRes = await p("SELECT COUNT(*) as count FROM reservas WHERE LOWER(estado) = 'pendiente'");
-    const reservasCanceladasRes = await p("SELECT COUNT(*) as count FROM reservas WHERE LOWER(estado) = 'cancelada'");
+    // 1. Tarjetas Estadísticas Reales Requeridas
+    // 1.1 Total usuarios registrados (clientes)
+    const totalUsuariosRes = await p("SELECT COUNT(*) as count FROM registro_usuarios WHERE rol != 'admin' OR rol IS NULL");
     
-    const lugaresPublicadosRes = await p("SELECT COUNT(*) as count FROM lugares");
-    const lugaresDesactivadosRes = [{ count: 0 }];
+    // 1.2 Total de reservas
+    const totalReservasRes = await p("SELECT COUNT(*) as count FROM reservas");
+    
+    // 1.3 Total de lugares turísticos
+    const totalLugaresRes = await p("SELECT COUNT(*) as count FROM lugares");
 
-    const totalResCount = totalReservasRes[0]?.count || 0;
-    const ingresosTotales = (totalResCount * 150000);
-    const promedioReservasDia = (totalResCount / 30).toFixed(1);
+    // 1.4 Reservas pendientes
+    const reservasPendientesRes = await p("SELECT COUNT(*) as count FROM reservas WHERE LOWER(estado) = 'pendiente'");
 
-    // 2. Gráfico 1: Reservas por mes
+    // 1.5 Reservas confirmadas
+    const reservasConfirmadasRes = await p("SELECT COUNT(*) as count FROM reservas WHERE LOWER(estado) IN ('confirmada', 'activa')");
+
+    // 1.6 Reservas canceladas
+    const reservasCanceladasRes = await p("SELECT COUNT(*) as count FROM reservas WHERE LOWER(estado) = 'cancelada'");
+
+    // 2. Gráfico 1: Reservas por mes (datos reales)
     const reservasPorMesRes = await p(`
-      SELECT DATE_FORMAT(fecha, '%b') as mes, COUNT(*) as cantidad 
+      SELECT 
+        DATE_FORMAT(fecha, '%Y-%m') as mes_key,
+        DATE_FORMAT(fecha, '%b %Y') as mes,
+        COUNT(*) as cantidad 
       FROM reservas 
-      GROUP BY DATE_FORMAT(fecha, '%b')
+      WHERE fecha IS NOT NULL 
+      GROUP BY mes_key, mes 
+      ORDER BY mes_key ASC 
       LIMIT 12
     `).catch(() => []);
-    
-    // 3. Gráfico 2: Ingresos mensuales (estimado con reservas)
-    const ingresosMensualesRes = [
-      { mes: 'May', total: 650000 },
-      { mes: 'Jun', total: 150000 },
-      { mes: 'Jul', total: 300000 }
-    ];
 
-    // 4. Gráfico 3: Lugares más reservados
+    // 3. Gráfico 2: Estados de las reservas (datos reales)
+    const estadosRes = await p(`
+      SELECT 
+        CASE 
+          WHEN LOWER(estado) IN ('confirmada', 'activa') THEN 'Confirmada'
+          WHEN LOWER(estado) = 'realizada' THEN 'Realizada'
+          WHEN LOWER(estado) = 'cancelada' THEN 'Cancelada'
+          ELSE 'Pendiente'
+        END as name,
+        COUNT(*) as value
+      FROM reservas
+      GROUP BY name
+    `).catch(() => []);
+
+    // 4. Gráfico 3: Métodos de pago utilizados (datos reales)
+    const metodosPagoRes = await p(`
+      SELECT 
+        COALESCE(NULLIF(TRIM(metodo_pago), ''), 'No especificado') as name,
+        COUNT(*) as cantidad
+      FROM reservas
+      GROUP BY name
+      ORDER BY cantidad DESC
+    `).catch(() => []);
+
+    // 5. Gráfico 4: Lugares más reservados (datos reales)
     const lugaresMasReservadosRes = await p(`
-      SELECT l.nombre, COUNT(r.id) as reservas
+      SELECT 
+        l.nombre, 
+        COUNT(r.id) as reservas
       FROM lugares l
-      LEFT JOIN reservas r ON l.id = r.lugar_id
+      INNER JOIN reservas r ON l.id = r.lugar_id
       GROUP BY l.id, l.nombre
       ORDER BY reservas DESC
-      LIMIT 5
+      LIMIT 6
     `).catch(() => []);
-
-    // 5. Gráfico 4: Estado de reservas
-    const estadoReservasRes = [
-      { name: 'Confirmadas', value: reservasConfirmadasRes[0].count || 3 },
-      { name: 'Pendientes', value: reservasPendientesRes[0].count || 2 },
-      { name: 'Canceladas', value: reservasCanceladasRes[0].count || 0 }
-    ];
-
-    // 6. Gráfico 5: Usuarios registrados por mes
-    const usuariosPorMesRes = await p(`
-      SELECT DATE_FORMAT(CURRENT_DATE(), '%b') as mes, COUNT(*) as usuarios
-      FROM registro_usuarios
-      GROUP BY DATE_FORMAT(CURRENT_DATE(), '%b')
-    `).catch(() => []);
-
-    // 7. Gráfico 6: Reservas por categoría
-    const reservasPorCategoriaRes = [
-      { categoria: 'Cultura', cantidad: 3 },
-      { categoria: 'Naturaleza', cantidad: 2 }
-    ];
 
     res.json({
       status: 'OK',
       data: {
         cards: {
-          totalUsuarios: totalUsuariosRes[0].count || 0,
-          usuariosActivos: totalUsuariosRes[0].count || 0,
-          usuariosNuevosMes: usuariosNuevosMesRes[0].count || 0,
-          totalReservas: totalResCount,
-          reservasConfirmadas: reservasConfirmadasRes[0].count || 0,
-          reservasPendientes: reservasPendientesRes[0].count || 0,
-          reservasCanceladas: reservasCanceladasRes[0].count || 0,
-          lugaresPublicados: lugaresPublicadosRes[0].count || 0,
-          lugaresDesactivados: lugaresDesactivadosRes[0].count || 0,
-          totalIngresos: ingresosTotales,
-          visitasSitio: 1420,
-          promedioReservasDia
+          totalUsuarios: totalUsuariosRes[0]?.count || 0,
+          totalReservas: totalReservasRes[0]?.count || 0,
+          totalLugares: totalLugaresRes[0]?.count || 0,
+          reservasPendientes: reservasPendientesRes[0]?.count || 0,
+          reservasConfirmadas: reservasConfirmadasRes[0]?.count || 0,
+          reservasCanceladas: reservasCanceladasRes[0]?.count || 0
         },
         charts: {
-          reservasPorMes: reservasPorMesRes.length ? reservasPorMesRes : [{ mes: 'May', cantidad: 3 }, { mes: 'Jun', cantidad: 1 }, { mes: 'Jul', cantidad: 1 }],
-          ingresosMensuales: ingresosMensualesRes.length ? ingresosMensualesRes : [{ mes: 'May', total: 650000 }, { mes: 'Jun', total: 150000 }, { mes: 'Jul', total: 200000 }],
-          lugaresMasReservados: lugaresMasReservadosRes.length ? lugaresMasReservadosRes : [{ nombre: 'Comuna 13', reservas: 4 }, { nombre: 'Guatapé', reservas: 2 }],
-          estadoReservas: estadoReservasRes,
-          usuariosPorMes: usuariosPorMesRes.length ? usuariosPorMesRes : [{ mes: 'Jul', usuarios: 5 }],
-          reservasPorCategoria: reservasPorCategoriaRes.length ? reservasPorCategoriaRes : [{ categoria: 'Cultura', cantidad: 3 }, { categoria: 'Naturaleza', cantidad: 2 }]
+          reservasPorMes: reservasPorMesRes.map(r => ({ mes: r.mes, cantidad: Number(r.cantidad) })),
+          estadoReservas: estadosRes.map(r => ({ name: r.name, value: Number(r.value) })),
+          metodosPago: metodosPagoRes.map(r => ({
+            name: r.name.charAt(0).toUpperCase() + r.name.slice(1),
+            cantidad: Number(r.cantidad)
+          })),
+          lugaresMasReservados: lugaresMasReservadosRes.map(r => ({
+            nombre: r.nombre,
+            reservas: Number(r.reservas)
+          }))
         }
       }
     });
@@ -100,3 +106,4 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
   }
 };
+

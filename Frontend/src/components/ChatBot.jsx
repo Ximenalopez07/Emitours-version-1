@@ -1,19 +1,60 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { UIContext } from "../context/UIContext";
+import { translations } from "../utils/translations";
 import { enviarMensajeChatbot } from "../api";
 import { FaRobot, FaPaperPlane, FaTimes, FaUserLock, FaComments } from "react-icons/fa";
 import "./ChatBot.css";
 
-const ChatBot = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const ChatBot = ({ isOpen: controlledIsOpen, onClose: controlledOnClose, hideFloatingButton = false }) => {
+  const { language } = useContext(UIContext);
+  const t = translations[language] || translations.es;
+
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+
+  const handleClose = () => {
+    if (controlledOnClose) {
+      controlledOnClose(false);
+    } else {
+      setInternalIsOpen(false);
+    }
+  };
+
+  const handleToggle = () => {
+    if (controlledOnClose) {
+      controlledOnClose(!isOpen);
+    } else {
+      setInternalIsOpen(!isOpen);
+    }
+  };
+
   const [mensajeInput, setMensajeInput] = useState("");
   const [chatHistory, setChatHistory] = useState([
     {
       remitente: "bot",
-      texto: "¡Hola! 🏔️ Soy el Asistente Virtual con IA de EmiTours. ¿En qué puedo ayudarte hoy?",
+      texto: language === 'en' 
+        ? "Hello! 🏔️ I am EmiTours Virtual AI Assistant. How can I assist you today?"
+        : "¡Hola! 🏔️ Soy el Asistente Virtual con IA de EmiTours. ¿En qué puedo ayudarte hoy?",
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [escribiendo, setEscribiendo] = useState(false);
+
+  // Actualizar mensaje de bienvenida si cambia el idioma y el chat aún solo tiene el mensaje inicial
+  useEffect(() => {
+    setChatHistory(prev => {
+      if (prev.length === 1 && prev[0].remitente === "bot") {
+        return [{
+          remitente: "bot",
+          texto: language === 'en' 
+            ? "Hello! 🏔️ I am EmiTours Virtual AI Assistant. How can I assist you today?"
+            : "¡Hola! 🏔️ Soy el Asistente Virtual con IA de EmiTours. ¿En qué puedo ayudarte hoy?",
+          hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }];
+      }
+      return prev;
+    });
+  }, [language]);
 
   const messagesEndRef = useRef(null);
 
@@ -50,7 +91,7 @@ const ChatBot = () => {
 
     try {
       const res = await enviarMensajeChatbot({ mensaje: textoUsuario });
-      const respuestaBot = res.data.respuesta || "Lo siento, no pude procesar tu mensaje.";
+      const respuestaBot = res.data.respuesta || (language === 'en' ? "Sorry, I couldn't process your request." : "Lo siento, no pude procesar tu mensaje.");
       
       setChatHistory([
         ...nuevoHistorial,
@@ -66,7 +107,7 @@ const ChatBot = () => {
         ...nuevoHistorial,
         {
           remitente: "bot",
-          texto: err.response?.data?.mensaje || "Para utilizar nuestro asistente virtual debes registrarte e iniciar sesión.",
+          texto: err.response?.data?.mensaje || t.chatbot_auth_requerida || "Para utilizar nuestro asistente virtual debes registrarte e iniciar sesión.",
           hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -77,15 +118,17 @@ const ChatBot = () => {
 
   return (
     <div className="chatbot-floating-wrapper">
-      {/* BOTÓN FLOTANTE INFERIOR DERECHA */}
-      <button 
-        className={`chatbot-toggle-btn ${isOpen ? 'active' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
-        title="Asistente Virtual IA EmiTours"
-      >
-        {isOpen ? <FaTimes /> : <FaRobot className="bot-icon-anim" />}
-        <span className="chatbot-badge-pulse"></span>
-      </button>
+      {/* BOTÓN FLOTANTE INFERIOR DERECHA (solo si no está oculto por prop) */}
+      {!hideFloatingButton && (
+        <button 
+          className={`chatbot-toggle-btn ${isOpen ? 'active' : ''}`}
+          onClick={handleToggle}
+          title={t.asistente_titulo || "Asistente Virtual IA EmiTours"}
+        >
+          {isOpen ? <FaTimes /> : <FaRobot className="bot-icon-anim" />}
+          <span className="chatbot-badge-pulse"></span>
+        </button>
+      )}
 
       {/* VENTANA FLOTANTE DE CHAT */}
       {isOpen && (
@@ -97,11 +140,13 @@ const ChatBot = () => {
                 <FaRobot />
               </div>
               <div>
-                <h3>Asistente IA EmiTours</h3>
-                <span className="status-online">● En línea | Consulta en tiempo real</span>
+                <h3>{t.asistente_titulo || "Asistente IA EmiTours"}</h3>
+                <span className="status-online">
+                  {language === 'en' ? '● Online | Real-time assistant' : '● En línea | Consulta en tiempo real'}
+                </span>
               </div>
             </div>
-            <button className="btn-close-chat" onClick={() => setIsOpen(false)}>
+            <button className="btn-close-chat" onClick={handleClose}>
               <FaTimes />
             </button>
           </div>
@@ -110,10 +155,10 @@ const ChatBot = () => {
           {!isAuthenticated ? (
             <div className="chatbot-auth-required">
               <FaUserLock className="lock-icon" />
-              <h4>Acceso Requerido</h4>
-              <p>Para utilizar nuestro asistente virtual debes registrarte e iniciar sesión.</p>
+              <h4>{language === 'en' ? 'Access Required' : 'Acceso Requerido'}</h4>
+              <p>{t.chatbot_auth_requerida || "Para utilizar nuestro asistente virtual debes registrarte e iniciar sesión."}</p>
               <a href="/inicioseccion" className="btn-go-login">
-                Iniciar Sesión / Registrarme
+                {language === 'en' ? 'Sign In / Register' : 'Iniciar Sesión / Registrarme'}
               </a>
             </div>
           ) : (
@@ -144,7 +189,7 @@ const ChatBot = () => {
               <form onSubmit={handleSendMessage} className="chatbot-input-form">
                 <input
                   type="text"
-                  placeholder="Pregunta sobre tours, cupos o tus reservas..."
+                  placeholder={t.chatbot_placeholder || "Pregunta sobre tours, cupos o tus reservas..."}
                   value={mensajeInput}
                   onChange={(e) => setMensajeInput(e.target.value)}
                   disabled={escribiendo}

@@ -10,7 +10,7 @@ import logo from "../assets/logo.jpg"; // <-- tu logo
 function NavBar() {
   const { user, language } = useContext(UIContext);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const t = translations[language];
+  const t = translations[language] || translations.es;
 
   return (
     <>

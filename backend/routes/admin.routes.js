@@ -21,6 +21,7 @@ router.get('/stats', adminStats.getDashboardStats);
 // Gestión de Usuarios (Clientes)
 router.get('/usuarios', adminCrud.getUsuarios);
 router.put('/usuarios/:id', adminCrud.updateUsuarioAdmin);
+router.delete('/usuarios/:id', adminCrud.deleteUsuarioAdmin);
 
 // Gestión de Administradores (Super Admin requerido)
 router.get('/administradores', adminCrud.getAdministradores);
@@ -34,6 +35,12 @@ router.post('/lugares', adminCrud.createLugarAdmin);
 router.put('/lugares/:id', adminCrud.updateLugarAdmin);
 router.delete('/lugares/:id', adminCrud.deleteLugarAdmin);
 
+// Gestión de Guías Turísticos
+router.get('/guias', adminCrud.getGuiasAdmin);
+router.post('/guias', adminCrud.createGuiaAdmin);
+router.put('/guias/:id', adminCrud.updateGuiaAdmin);
+router.delete('/guias/:id', adminCrud.deleteGuiaAdmin);
+
 // Gestión de Categorías
 router.get('/categorias', adminCrud.getCategorias);
 router.post('/categorias', adminCrud.createCategoria);
@@ -43,6 +50,8 @@ router.delete('/categorias/:id', adminCrud.deleteCategoria);
 // Gestión de Reservas
 router.get('/reservas', adminCrud.getReservasAdmin);
 router.put('/reservas/:id/estado', adminCrud.updateReservaStatus);
+router.put('/reservas/:id', adminCrud.updateReservaAdmin);
+router.delete('/reservas/:id', adminCrud.deleteReservaAdmin);
 
 // Gestión de Pagos
 router.get('/pagos', adminCrud.getPagosAdmin);

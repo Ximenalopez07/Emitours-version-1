@@ -14,8 +14,10 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "google-auth-library": "^11.1.0",
     "jsonwebtoken": "^9.0.3",
     "libphonenumber-js": "^1.13.12",
-    "mysql2": "^3.22.3"
+    "mysql2": "^3.22.3",
+    "nodemailer": "^10.0.10"
   }
 }

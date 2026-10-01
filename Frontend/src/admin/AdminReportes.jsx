@@ -3,7 +3,7 @@ import { getAdminUsuarios, getAdminReservas, getAdminPagos, getAdminLugares } fr
 import { FaFilePdf, FaFileExcel, FaFileCsv } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function AdminReportes() {
   const downloadReport = async (tipo, formato) => {
@@ -35,8 +35,12 @@ export default function AdminReportes() {
         doc.text(`Reporte Oficial de ${tipo} - EmiTours`, 14, 15);
         if (data.length > 0) {
           const keys = Object.keys(data[0]).slice(0, 5);
-          const body = data.map(item => keys.map(k => String(item[k] || '')));
-          doc.autoTable({ head: [keys], body, startY: 22 });
+          const tableConfig = { head: [keys], body, startY: 22 };
+          if (typeof doc.autoTable === 'function') {
+            doc.autoTable(tableConfig);
+          } else {
+            autoTable(doc, tableConfig);
+          }
         }
         doc.save(`${filename}.pdf`);
       } else {

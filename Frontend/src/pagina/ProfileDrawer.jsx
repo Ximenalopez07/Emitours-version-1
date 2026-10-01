@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import { UIContext } from "../context/UIContext";
 import { translations } from "../utils/translations";
-import { updateUsuario, cambiarContrasena, deleteUsuario } from "../api";
+import { updateUsuario, deleteUsuario } from "../api";
 import PhoneInput from "../components/PhoneInput";
 import "./ProfileDrawer.css";
 
@@ -12,20 +12,10 @@ export default function ProfileDrawer({ isOpen, onClose }) {
   // Profile Edit State
   const [isEditing, setIsEditing] = useState(false);
   const [nombre, setNombre] = useState(user?.nombre_usuario || "");
-  const [correo, setCorreo] = useState(user?.correo_electronico || "");
   const [telefonoE164, setTelefonoE164] = useState(user?.telefono || "");
   const [isTelefonoValid, setIsTelefonoValid] = useState(true);
   const [foto, setFoto] = useState(user?.foto || "");
   const [errorProfile, setErrorProfile] = useState(null);
-
-  // Password Change State
-  const [showPassForm, setShowPassForm] = useState(false);
-  const [contrasenaActual, setContrasenaActual] = useState("");
-  const [nuevaContrasena, setNuevaContrasena] = useState("");
-  const [confirmarContrasena, setConfirmarContrasena] = useState("");
-
-  // Devices State
-  const [showDevices, setShowDevices] = useState(false);
 
   if (!isOpen) return null;
 
@@ -47,11 +37,8 @@ export default function ProfileDrawer({ isOpen, onClose }) {
     try {
       const res = await updateUsuario(user.id_registro, {
         nombre_usuario: nombre,
-        correo_electronico: correo,
         telefono: telefonoE164,
-        foto,
-        edad: user.edad,
-        sexo: user.sexo
+        foto
       });
 
       if (res.data && res.data.user) {
@@ -59,7 +46,7 @@ export default function ProfileDrawer({ isOpen, onClose }) {
         alert(t.exito_perfil);
       } else {
         alert(t.exito_perfil);
-        setUser({ ...user, nombre_usuario: nombre, correo_electronico: correo, telefono: telefonoE164, foto });
+        setUser({ ...user, nombre_usuario: nombre, telefono: telefonoE164, foto });
       }
       setIsEditing(false);
     } catch (err) {
@@ -70,44 +57,19 @@ export default function ProfileDrawer({ isOpen, onClose }) {
 
   const handleCancelProfile = () => {
     setNombre(user?.nombre_usuario || "");
-    setCorreo(user?.correo_electronico || "");
     setTelefonoE164(user?.telefono || "");
     setFoto(user?.foto || "");
     setErrorProfile(null);
     setIsEditing(false);
   };
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    if (nuevaContrasena !== confirmarContrasena) {
-      alert(t.error_pass_diferentes);
-      return;
-    }
-    if (nuevaContrasena.length < 8) {
-      alert(t.error_pass_corta);
-      return;
-    }
-
-    try {
-      await cambiarContrasena(user.id_registro, {
-        contrasenaActual,
-        nuevaContrasena
-      });
-      alert(t.exito_pass);
-      setContrasenaActual("");
-      setNuevaContrasena("");
-      setConfirmarContrasena("");
-      setShowPassForm(false);
-    } catch (err) {
-      console.error(err);
-      alert(t.error_pass + (err.response?.data?.mensaje || err.message));
-    }
-  };
-
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("userToken");
     localStorage.removeItem("usuario");
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    sessionStorage.clear();
     setUser(null);
     onClose();
     window.location.href = "/inicioseccion";
@@ -173,30 +135,12 @@ export default function ProfileDrawer({ isOpen, onClose }) {
                   />
                 </div>
                 <div className="form-group">
-                  <label>{t.correo}</label>
-                  <input
-                    type="email"
-                    value={correo}
-                    onChange={(e) => setCorreo(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
                   <label>{t.telefono}</label>
                   <PhoneInput
                     value={telefonoE164}
                     onChange={handlePhoneChange}
                     placeholder="Ej: 3018640872"
                     defaultCountry="CO"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>{t.foto}</label>
-                  <input
-                    type="text"
-                    value={foto}
-                    onChange={(e) => setFoto(e.target.value)}
-                    placeholder="https://enlace-a-tu-foto.jpg"
                   />
                 </div>
                 <div className="form-buttons">
@@ -209,71 +153,10 @@ export default function ProfileDrawer({ isOpen, onClose }) {
             )}
           </div>
 
-          {/* SECCIÓN 2: SEGURIDAD */}
+          {/* SECCIÓN 2: SEGURIDAD (Sin cambiar contraseña ni dispositivos en UI) */}
           <div className="drawer-section">
             <h3>🔒 {t.seguridad}</h3>
             
-            <button className="drawer-link-btn" onClick={() => setShowPassForm(!showPassForm)}>
-              🔑 {t.cambiar_pass}
-            </button>
-
-            {showPassForm && (
-              <form onSubmit={handleChangePassword} className="password-form">
-                <div className="form-group">
-                  <input
-                    type="password"
-                    placeholder={t.pass_actual}
-                    value={contrasenaActual}
-                    onChange={(e) => setContrasenaActual(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <input
-                    type="password"
-                    placeholder={t.pass_nueva}
-                    value={nuevaContrasena}
-                    onChange={(e) => setNuevaContrasena(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <input
-                    type="password"
-                    placeholder={t.pass_confirmar}
-                    value={confirmarContrasena}
-                    onChange={(e) => setConfirmarContrasena(e.target.value)}
-                    required
-                  />
-                </div>
-                <button type="submit" className="btn-update-pass">{t.actualizar_pass}</button>
-              </form>
-            )}
-
-            <button className="drawer-link-btn" onClick={() => setShowDevices(!showDevices)}>
-              📱 {t.dispositivos}
-            </button>
-
-            {showDevices && (
-              <div className="devices-list">
-                <h4>{t.dispositivos_activos}:</h4>
-                <div className="device-item">
-                  <span className="device-icon">💻</span>
-                  <div>
-                    <p className="device-name">{t.este_dispositivo}</p>
-                    <p className="device-meta">Chrome - {t.medellin}</p>
-                  </div>
-                </div>
-                <div className="device-item mockup">
-                  <span className="device-icon">📱</span>
-                  <div>
-                    <p className="device-name">iPhone 15 - {t.medellin}</p>
-                    <p className="device-meta">Safari - 2 hrs ago</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <button className="btn-logout" onClick={handleLogout}>
               🚪 {t.cerrar_sesion}
             </button>

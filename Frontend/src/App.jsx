@@ -17,6 +17,7 @@ import AdminDashboard from "./admin/AdminDashboard";
 import AdminUsuarios from "./admin/AdminUsuarios";
 import AdminAdministradores from "./admin/AdminAdministradores";
 import AdminLugares from "./admin/AdminLugares";
+import AdminGuias from "./admin/AdminGuias";
 import AdminCategorias from "./admin/AdminCategorias";
 import AdminReservas from "./admin/AdminReservas";
 import AdminPagos from "./admin/AdminPagos";
@@ -45,6 +46,7 @@ function MainApp() {
           <Route path="/reservas" element={<Reservas />} />
           <Route path="/Contacto" element={<Contacto />} />
           <Route path="/inicioseccion" element={<InicioSeccion />} />
+          <Route path="/iniciosesccion" element={<InicioSeccion />} />
 
           {/* Login de Administrador */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -54,15 +56,16 @@ function MainApp() {
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/usuarios" element={<AdminUsuarios />} />
-              <Route path="/admin/administradores" element={<AdminAdministradores />} />
               <Route path="/admin/lugares" element={<AdminLugares />} />
-              <Route path="/admin/categorias" element={<AdminCategorias />} />
+              <Route path="/admin/guias" element={<AdminGuias />} />
               <Route path="/admin/reservas" element={<AdminReservas />} />
+              <Route path="/admin/configuracion" element={<AdminConfiguracion />} />
+              <Route path="/admin/administradores" element={<AdminAdministradores />} />
+              <Route path="/admin/categorias" element={<AdminCategorias />} />
               <Route path="/admin/pagos" element={<AdminPagos />} />
               <Route path="/admin/comentarios" element={<AdminComentarios />} />
               <Route path="/admin/promociones" element={<AdminPromociones />} />
               <Route path="/admin/reportes" element={<AdminReportes />} />
-              <Route path="/admin/configuracion" element={<AdminConfiguracion />} />
               <Route path="/admin/perfil" element={<AdminPerfil />} />
             </Route>
           </Route>

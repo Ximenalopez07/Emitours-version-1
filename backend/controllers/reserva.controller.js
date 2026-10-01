@@ -35,19 +35,21 @@ function normalizeMetodoPago(mp) {
   return 'nequi';
 }
 
-// Normalizar estado al enum ('pendiente', 'confirmada', 'cancelada')
+// Normalizar estado al enum ('pendiente', 'confirmada', 'cancelada', 'realizada')
 function normalizeEstado(st) {
   if (!st) return 'pendiente';
   const val = String(st).toLowerCase();
+  if (val.includes('realiz')) return 'realizada';
   if (val.includes('confir') || val.includes('activa')) return 'confirmada';
   if (val.includes('cancel')) return 'cancelada';
   return 'pendiente';
 }
 
-// Normalizar estado_pago al enum ('pendiente', 'pagado')
+// Normalizar estado_pago al enum ('pendiente', 'parcial', 'pagado')
 function normalizeEstadoPago(ep) {
   if (!ep) return 'pendiente';
   const val = String(ep).toLowerCase();
+  if (val.includes('parcial') || val.includes('50%')) return 'parcial';
   if (val.includes('pagad')) return 'pagado';
   return 'pendiente';
 }
@@ -101,7 +103,7 @@ exports.getAll = (req, res) => {
 // CREAR RESERVA CON INSERT ESPECIFICANDO COLUMNAS
 // ==========================================
 exports.create = (req, res) => {
-  const { usuario_id, lugar_id, fecha, hora, numero_personas, idioma, idioma_tour, metodo_pago, opcion_pago } = req.body;
+  const { usuario_id, lugar_id, fecha, hora, numero_personas, idioma, idioma_tour, metodo_pago, opcion_pago, precio_total } = req.body;
   const idiomaRaw = idioma || idioma_tour;
 
   const uId = usuario_id || req.body.id_usuario || req.body.userId || req.user?.id || req.user?.id_registro;
@@ -156,10 +158,14 @@ exports.create = (req, res) => {
 
       const lugar = resLugar[0];
       const cantidadPersonas = parseInt(numero_personas, 10) || 1;
-      const precioTotal = parseFloat(((lugar.precio || 150000) * cantidadPersonas).toFixed(2));
+      const precioTotal = (precio_total && !isNaN(parseFloat(precio_total)))
+        ? parseFloat(parseFloat(precio_total).toFixed(2))
+        : parseFloat(((lugar.precio || 150000) * cantidadPersonas).toFixed(2));
       const codigo = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      const estadoPagoEnum = 'pendiente';
+      // Determinar estado de pago según la opción seleccionada (Pagar el total o Pagar el 50%)
+      const opcClean = String(opcion_pago || '').toLowerCase();
+      const estadoPagoEnum = (opcClean.includes('total') || opcClean.includes('100')) ? 'pagado' : 'parcial';
       const estadoEnum = 'pendiente';
 
       // 7. INSERT ESPECIFICANDO EXACTAMENTE LOS NOMBRES DE LAS COLUMNAS

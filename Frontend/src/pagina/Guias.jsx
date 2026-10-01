@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getGuias } from "../api";
 import { FaPhoneAlt, FaEnvelope, FaGlobe, FaUserFriends } from "react-icons/fa";
-import fabiolaImg from "../assets/fabiola.jpg";
+import { resolveGuiaPhoto } from "../utils/assetHelper";
 import "./Guias.css";
 
 export default function Guias() {
@@ -72,11 +72,7 @@ export default function Guias() {
             <div key={guia.id} className="guia-card">
               <div className="guia-photo-container">
                 <img
-                  src={
-                    guia.nombre && guia.nombre.includes("Fabiola") || guia.apellido && guia.apellido.includes("Fabiola")
-                      ? fabiolaImg
-                      : (guia.foto || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300")
-                  }
+                  src={resolveGuiaPhoto(guia.foto, `${guia.nombre || ''} ${guia.apellido || ''}`)}
                   alt={`${guia.nombre} ${guia.apellido}`}
                   className="guia-photo"
                 />
