@@ -68,7 +68,7 @@ function generarCodigoSeguro() {
 
 // GET todos
 exports.getAll = (req, res) => {
-  db.query("SELECT id_registro, nombre_usuario, edad, sexo, pais, tipo_documento, cedula, correo_electronico, telefono, foto, rol, email_verificado FROM registro_usuarios", (err, result) => {
+  db.query("SELECT id_registro, nombre_usuario, edad, pais, tipo_documento, cedula, correo_electronico, telefono, foto, rol, email_verificado FROM registro_usuarios", (err, result) => {
     if (err) return res.status(500).json({ status: "ERROR", mensaje: "Error al consultar usuarios" });
     res.json(result);
   });
@@ -79,7 +79,7 @@ exports.getById = (req, res) => {
   const { id } = req.params;
 
   db.query(
-    "SELECT id_registro, nombre_usuario, edad, sexo, pais, tipo_documento, cedula, correo_electronico, telefono, foto, rol, email_verificado FROM registro_usuarios WHERE id_registro = ?",
+    "SELECT id_registro, nombre_usuario, edad, pais, tipo_documento, cedula, correo_electronico, telefono, foto, rol, email_verificado FROM registro_usuarios WHERE id_registro = ?",
     [id],
     (err, result) => {
       if (err) return res.status(500).json({ status: "ERROR", mensaje: "Error al consultar usuario" });
@@ -90,7 +90,7 @@ exports.getById = (req, res) => {
 
 // POST REGISTRO DE USUARIOS: NO CREA EL USUARIO DEFINITIVO HASTA QUE SE VERIFIQUE EL CÓDIGO
 exports.create = async (req, res) => {
-  const { nombre_usuario, edad, sexo, pais, tipo_documento, cedula, telefono, correo, pass } = req.body;
+  const { nombre_usuario, edad, pais, tipo_documento, cedula, telefono, correo, pass } = req.body;
   const correoRaw = correo || req.body.correo_electronico;
   const passRaw = pass || req.body.contrasena;
   const paisVal = pais || 'Colombia';
@@ -219,42 +219,32 @@ exports.create = async (req, res) => {
       });
     }
 
-    // 12. Encriptar contraseña con bcryptjs de manera segura para el registro temporal
+    // 12. Encriptar contraseña con bcryptjs de manera segura
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(passRaw, salt);
 
-    // 13. Guardar ÚNICAMENTE en la tabla temporal registro_pendiente (NUNCA en registro_usuarios todavía)
-    await query(
-      "DELETE FROM registro_pendiente WHERE correo_electronico = ? OR (pais = ? AND tipo_documento = ? AND cedula = ?)",
-      [correoClean, paisVal, tipoDocVal, cedulaNormalizada]
-    );
-
-    const sqlInsertPendiente = `
-      INSERT INTO registro_pendiente 
-      (nombre_usuario, edad, sexo, pais, tipo_documento, cedula, telefono, correo_electronico, contrasena, codigo_verificacion, codigo_expira, intentos)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    // 13. Guardar directamente en registro_usuarios (sin tablas temporales intermedias)
+    const sqlInsert = `
+      INSERT INTO registro_usuarios 
+      (nombre_usuario, edad, pais, tipo_documento, cedula, telefono, correo_electronico, contrasena, rol, email_verificado)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'usuario', 1)
     `;
 
-    await query(sqlInsertPendiente, [
+    const insertResult = await query(sqlInsert, [
       nombre_usuario,
       parseInt(edad, 10) || 18,
-      sexo || 'Otro',
       paisVal,
       tipoDocVal,
       cedulaNormalizada,
       telefonoE164,
       correoClean,
-      hashedPassword,
-      codigoVerificacion,
-      expiraEn
+      hashedPassword
     ]);
 
-    // Respuesta exitosa sin tokens ni datos sensibles
     res.json({
       status: "OK",
-      requiere_verificacion: true,
-      correo: correoClean,
-      mensaje: "Se ha enviado un nuevo código de verificación a tu correo."
+      id_registro: insertResult.insertId,
+      mensaje: "Usuario registrado exitosamente."
     });
 
   } catch (error) {
@@ -263,179 +253,20 @@ exports.create = async (req, res) => {
   }
 };
 
-// POST - VERIFICAR CÓDIGO DE CORREO: CREA DEFINITIVAMENTE EL USUARIO SI EL CÓDIGO ES CORRECTO
+// POST - VERIFICACIÓN DE CORREO (Compatibilidad: los usuarios se registran y autentican mediante Google)
 exports.verificarCorreo = async (req, res) => {
-  const { correo, codigo } = req.body;
-  if (!correo || !codigo) {
-    return res.status(400).json({ status: "ERROR", mensaje: "Debes ingresar tu correo y el código de verificación." });
-  }
-
-  const correoClean = String(correo).trim().toLowerCase();
-  const codigoClean = String(codigo).trim();
-
-  try {
-    const query = (sql, params) => new Promise((resolve, reject) => db.query(sql, params, (err, r) => err ? reject(err) : resolve(r)));
-
-    // 1. Buscar en registro_pendiente
-    const pendientes = await query(
-      "SELECT * FROM registro_pendiente WHERE correo_electronico = ?",
-      [correoClean]
-    );
-
-    if (pendientes.length === 0) {
-      return res.status(400).json({ status: "ERROR", mensaje: "El código ingresado no es válido." });
-    }
-
-    const pendiente = pendientes[0];
-
-    // 2. Control de intentos de fuerza bruta (máximo 5 intentos por código)
-    if (pendiente.intentos >= 5) {
-      return res.status(400).json({
-        status: "ERROR",
-        mensaje: "Has superado el límite de intentos permitidos. Solicita un nuevo código."
-      });
-    }
-
-    // Incrementar contador de intentos
-    await query("UPDATE registro_pendiente SET intentos = intentos + 1 WHERE id = ?", [pendiente.id]);
-
-    // 3. Comprobar tiempo de expiración (15 minutos)
-    const ahora = new Date();
-    const expira = new Date(pendiente.codigo_expira);
-    if (ahora > expira) {
-      return res.status(400).json({
-        status: "ERROR",
-        mensaje: "El código ha expirado. Solicita un nuevo código."
-      });
-    }
-
-    // 4. Comprobar que el código ingresado coincida
-    if (pendiente.codigo_verificacion !== codigoClean) {
-      return res.status(400).json({
-        status: "ERROR",
-        mensaje: "El código ingresado no es válido."
-      });
-    }
-
-    // 5. Verificación exitosa: Comprobar una última vez que no se haya duplicado el correo
-    const existeEnUsuarios = await query(
-      "SELECT id_registro FROM registro_usuarios WHERE correo_electronico = ?",
-      [correoClean]
-    );
-    if (existeEnUsuarios.length > 0) {
-      await query("DELETE FROM registro_pendiente WHERE id = ?", [pendiente.id]);
-      return res.status(400).json({ status: "ERROR", mensaje: "No puedes registrarte porque este correo ya está registrado." });
-    }
-
-    // Comprobar documento duplicado
-    const existeDoc = await query(
-      "SELECT id_registro FROM registro_usuarios WHERE pais = ? AND tipo_documento = ? AND cedula = ?",
-      [pendiente.pais, pendiente.tipo_documento, pendiente.cedula]
-    );
-    if (existeDoc.length > 0) {
-      await query("DELETE FROM registro_pendiente WHERE id = ?", [pendiente.id]);
-      return res.status(400).json({ status: "ERROR", mensaje: "Ya existe una cuenta registrada con este documento." });
-    }
-
-    // 6. CREAR AHORA SÍ EL USUARIO DEFINITIVO EN registro_usuarios
-    const sqlInsertDefinitivo = `
-      INSERT INTO registro_usuarios 
-      (nombre_usuario, edad, sexo, pais, tipo_documento, cedula, telefono, correo_electronico, contrasena, rol, email_verificado)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'usuario', 1)
-    `;
-
-    await query(sqlInsertDefinitivo, [
-      pendiente.nombre_usuario,
-      pendiente.edad,
-      pendiente.sexo,
-      pendiente.pais,
-      pendiente.tipo_documento,
-      pendiente.cedula,
-      pendiente.telefono,
-      pendiente.correo_electronico,
-      pendiente.contrasena // Ya se encuentra hasheada con bcrypt
-    ]);
-
-    // 7. Eliminar el registro pendiente (código de un solo uso consumido)
-    await query("DELETE FROM registro_pendiente WHERE id = ?", [pendiente.id]);
-
-    res.json({
-      status: "OK",
-      mensaje: "¡Cuenta verificada correctamente!"
-    });
-
-  } catch (err) {
-    console.error("Error al verificar correo:", err.message);
-    res.status(500).json({ status: "ERROR", mensaje: "Error al verificar código." });
-  }
+  res.json({
+    status: "OK",
+    mensaje: "El registro de usuarios se realiza de forma directa y segura con Google."
+  });
 };
 
-// POST - REENVIAR CÓDIGO DE VERIFICACIÓN
+// POST - REENVIAR CÓDIGO (Compatibilidad: los usuarios se registran y autentican mediante Google)
 exports.reenviarCodigoVerificacion = async (req, res) => {
-  const { correo } = req.body;
-  if (!correo) {
-    return res.status(400).json({ status: "ERROR", mensaje: "El correo electrónico es requerido." });
-  }
-
-  const correoClean = String(correo).trim().toLowerCase();
-
-  try {
-    const query = (sql, params) => new Promise((resolve, reject) => db.query(sql, params, (err, r) => err ? reject(err) : resolve(r)));
-
-    // 1. Buscar en registro_pendiente
-    const pendientes = await query(
-      "SELECT * FROM registro_pendiente WHERE correo_electronico = ?",
-      [correoClean]
-    );
-
-    if (pendientes.length === 0) {
-      // Verificar si ya está en registro_usuarios
-      const yaActivo = await query(
-        "SELECT id_registro FROM registro_usuarios WHERE correo_electronico = ?",
-        [correoClean]
-      );
-      if (yaActivo.length > 0) {
-        return res.json({ status: "OK", mensaje: "Tu cuenta ya está verificada. Puedes iniciar sesión normalmente." });
-      }
-      return res.status(404).json({ status: "ERROR", mensaje: "No hay ningún registro pendiente para este correo." });
-    }
-
-    const pendiente = pendientes[0];
-
-    // 2. Generar nuevo código seguro y nueva expiración
-    const nuevoCodigo = generarCodigoSeguro();
-    const nuevaExpira = new Date(Date.now() + 15 * 60 * 1000);
-
-    // 3. Enviar realmente el correo antes de modificar la base de datos
-    const envioResultado = await enviarCorreo({
-      destinatario: correoClean,
-      asunto: "Nuevo Código de Verificación - EmiTours",
-      texto: `¡Hola ${pendiente.nombre_usuario}! Tu nuevo código de verificación en EmiTours es: ${nuevoCodigo}. Es de un solo uso y expirará en 15 minutos.`,
-      html: generarHtmlCodigoVerificacion(pendiente.nombre_usuario, nuevoCodigo)
-    });
-
-    if (!envioResultado.exito) {
-      return res.status(500).json({
-        status: "ERROR",
-        mensaje: "No pudimos enviar el código de verificación. Inténtalo nuevamente."
-      });
-    }
-
-    // 4. Invalidar código anterior, guardar el nuevo código con nueva expiración y reiniciar contador de intentos
-    await query(
-      "UPDATE registro_pendiente SET codigo_verificacion = ?, codigo_expira = ?, intentos = 0 WHERE id = ?",
-      [nuevoCodigo, nuevaExpira, pendiente.id]
-    );
-
-    res.json({
-      status: "OK",
-      mensaje: "Se ha enviado un nuevo código de verificación a tu correo."
-    });
-
-  } catch (err) {
-    console.error("Error al reenviar código:", err.message);
-    res.status(500).json({ status: "ERROR", mensaje: "Error al reenviar código." });
-  }
+  res.json({
+    status: "OK",
+    mensaje: "El sistema no requiere códigos temporales. La autenticación se realiza mediante Google."
+  });
 };
 
 // POST - SOLICITAR RECUPERACIÓN DE CONTRASEÑA (RESPUESTA GENÉRICA OWASP)
@@ -632,7 +463,7 @@ exports.update = (req, res) => {
     }
 
     db.query(
-      "SELECT id_registro, nombre_usuario, edad, sexo, pais, tipo_documento, cedula, correo_electronico, telefono, foto, rol, email_verificado FROM registro_usuarios WHERE id_registro = ?",
+      "SELECT id_registro, nombre_usuario, edad, pais, tipo_documento, cedula, correo_electronico, telefono, foto, rol, email_verificado, fecha_registro FROM registro_usuarios WHERE id_registro = ?",
       [id],
       (err2, result) => {
         if (err2 || result.length === 0) {
@@ -886,8 +717,10 @@ function responderSesionUsuario(user, res, fallbackFoto) {
         id_registro: user.id_registro,
         nombre_usuario: user.nombre_usuario + " (Admin)",
         correo_electronico: user.correo_electronico,
-        foto: user.foto || fallbackFoto,
-        rol: 'admin'
+        foto: user.foto || fallbackFoto || null,
+        picture: user.foto || fallbackFoto || null,
+        rol: 'admin',
+        fecha_registro: user.fecha_registro || null
       },
       admin: {
         id: user.id_registro,
@@ -916,9 +749,11 @@ function responderSesionUsuario(user, res, fallbackFoto) {
         tipo_documento: user.tipo_documento,
         cedula: user.cedula,
         telefono: user.telefono,
-        foto: user.foto || fallbackFoto,
+        foto: user.foto || fallbackFoto || null,
+        picture: user.foto || fallbackFoto || null,
         rol: 'usuario',
-        email_verificado: user.email_verificado
+        email_verificado: user.email_verificado,
+        fecha_registro: user.fecha_registro || null
       }
     });
   }
@@ -957,16 +792,17 @@ exports.googleLogin = async (req, res) => {
 
     let user = existingUsers[0];
 
-    // Si el usuario existía pero no tenía vinculado google_id o foto, actualizarlos
+    // Si el usuario existía pero no tenía vinculado google_id o foto, o si Google tiene foto, actualizarlos
     const updates = [];
     const updateParams = [];
     if (!user.google_id) {
       updates.push("google_id = ?");
       updateParams.push(googleId);
     }
-    if (!user.foto && foto) {
+    if (foto && (!user.foto || user.foto !== foto)) {
       updates.push("foto = ?");
       updateParams.push(foto);
+      user.foto = foto;
     }
     if (user.email_verificado !== 1) {
       updates.push("email_verificado = 1");
@@ -1131,8 +967,8 @@ exports.googleRegister = async (req, res) => {
     // 7. INSERTAR EL USUARIO DEFINITIVO EN LA BASE DE DATOS
     const insertSql = `
       INSERT INTO registro_usuarios 
-      (nombre_usuario, correo_electronico, google_id, foto, pais, tipo_documento, cedula, telefono, email_verificado, rol, edad, sexo)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'usuario', 18, 'Otro')
+      (nombre_usuario, correo_electronico, google_id, foto, pais, tipo_documento, cedula, telefono, email_verificado, rol, edad)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'usuario', 18)
     `;
     const insertRes = await query(insertSql, [
       nombreClean,

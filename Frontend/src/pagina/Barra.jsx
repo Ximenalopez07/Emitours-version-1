@@ -2,8 +2,11 @@ import "./Barra.css";
 import facebook from "../assets/facebook.jpg";
 import instagram from "../assets/instagram.jpg";
 import pse from "../assets/pse.jpg";
+import { useTranslation } from "../context/UIContext";
 
 function Barra() {
+  const { t } = useTranslation();
+
   return (
     <footer className="footer">
       <div className="footer-left">
@@ -13,14 +16,9 @@ function Barra() {
 
       <div className="footer-center">
         <p className="email"> emitoursc13@gmail.com</p>
-        <p className="politicas">Para la empresa la seguridad del titular es nuestra prioridad,
-        por lo que protegemos sus datos personales mediante el uso, 
-        aplicación y mantenimiento de altas medidas de seguridad 
-        técnicas, físicas y administrativas, teniendo el titular la certeza 
-        que sus datos personales estarán protegidos y serán tratados 
-        de manera confidencial. Les informamos que el RESPONSABLE de recabar y 
-        dar tratamiento y/o utilizar los datos personales que el titular proporcione es la 
-        empresa, así como sus subsidiarias, asociadas, sociedades controladoras y afiliadas.</p>
+        <p className="politicas">
+          {t.footer_politica || "Para la empresa la seguridad del titular es nuestra prioridad, por lo que protegemos sus datos personales mediante el uso, aplicación y mantenimiento de altas medidas de seguridad técnicas, físicas y administrativas, teniendo el titular la certeza que sus datos personales estarán protegidos y serán tratados de manera confidencial. Les informamos que el RESPONSABLE de recabar y dar tratamiento y/o utilizar los datos personales que el titular proporcione es la empresa, así como sus subsidiarias, asociadas, sociedades controladoras y afiliadas."}
+        </p>
       </div>
 
       <div className="footer-right">

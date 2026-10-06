@@ -2,9 +2,11 @@ import React, { useEffect, useState } from "react";
 import { getGuias } from "../api";
 import { FaPhoneAlt, FaEnvelope, FaGlobe, FaUserFriends } from "react-icons/fa";
 import { resolveGuiaPhoto } from "../utils/assetHelper";
+import { useTranslation } from "../context/UIContext";
 import "./Guias.css";
 
 export default function Guias() {
+  const { t, language } = useTranslation();
   const [guias, setGuias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,10 +25,26 @@ export default function Guias() {
       })
       .catch((err) => {
         console.error("Error al obtener los guías:", err);
-        setError("No se pudieron cargar los guías turísticos.");
+        setError(t.guias_error || "No se pudieron cargar los guías turísticos.");
         setLoading(false);
       });
-  }, []);
+  }, [t.guias_error]);
+
+  const formatIdiomaGuia = (idiomaStr) => {
+    if (!idiomaStr) return "";
+    if (language === "en") {
+      if (idiomaStr.toLowerCase().includes("español") && idiomaStr.toLowerCase().includes("inglés")) {
+        return "Spanish & English";
+      }
+      if (idiomaStr.toLowerCase() === "español") {
+        return "Spanish";
+      }
+      if (idiomaStr.toLowerCase() === "inglés") {
+        return "English";
+      }
+    }
+    return idiomaStr;
+  };
 
   if (loading) {
     return (
@@ -34,9 +52,9 @@ export default function Guias() {
         <div className="guias-content">
           <div className="text-center py-5">
             <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Cargando...</span>
+              <span className="visually-hidden">{t.cargando || "Cargando..."}</span>
             </div>
-            <p className="mt-2 text-muted">Cargando guías...</p>
+            <p className="mt-2 text-muted">{t.guias_cargando || "Cargando guías..."}</p>
           </div>
         </div>
       </div>
@@ -59,10 +77,10 @@ export default function Guias() {
         {/* Encabezado exacto a la imagen */}
         <div className="guias-header">
           <h1 className="guias-title">
-            <FaUserFriends className="guias-title-icon" /> Guías
+            <FaUserFriends className="guias-title-icon" /> {t.guias_titulo || "Guías"}
           </h1>
           <p className="guias-subtitle">
-            Conoce a nuestros guías turísticos.
+            {t.guias_subtitulo || "Conoce a nuestros guías turísticos."}
           </p>
         </div>
 
@@ -95,7 +113,7 @@ export default function Guias() {
 
                 <div className="guia-detail-item">
                   <FaGlobe className="guia-icon" />
-                  <span>{guia.idioma}</span>
+                  <span>{formatIdiomaGuia(guia.idioma)}</span>
                 </div>
               </div>
             </div>

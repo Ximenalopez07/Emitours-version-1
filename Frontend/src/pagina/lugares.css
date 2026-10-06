@@ -56,6 +56,9 @@
   gap: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: auto;
+  min-height: min-content;
+  overflow: visible;
 }
 
 .lugar-card:hover {
@@ -79,6 +82,8 @@
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  min-width: 0;
+  overflow: visible;
 }
 
 .lugar-name {
@@ -91,8 +96,15 @@
 .lugar-description {
   font-size: 14.5px;
   color: #475569;
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+  overflow: visible;
+  max-height: none;
+  display: block;
 }
 
 .lugar-details-row {
@@ -126,6 +138,12 @@
   .lugar-card {
     flex-direction: column;
     align-items: flex-start;
+    height: auto;
+    overflow: visible;
+  }
+
+  .lugar-photo-container {
+    width: 100%;
   }
 
   .lugar-photo {

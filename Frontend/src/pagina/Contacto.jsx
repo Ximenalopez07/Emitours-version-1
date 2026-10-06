@@ -93,7 +93,7 @@ const Contacto = () => {
       {/* ENCABEZADO TÍTULO BLANCO */}
       <div className="contacto-title-header">
         <h1>{t.contacto.toUpperCase()}</h1>
-        <p>{language === 'en' ? 'Chat with our AI virtual assistant for immediate information and guidance.' : 'Chatea con nuestro asistente virtual con IA para información y orientación inmediata.'}</p>
+        <p>{t.contacto_subtitulo || (language === 'en' ? 'Chat with our AI virtual assistant for immediate information and guidance.' : 'Chatea con nuestro asistente virtual con IA para información y orientación inmediata.')}</p>
       </div>
 
       {/* CONTENIDO CENTRADO */}
@@ -106,7 +106,7 @@ const Contacto = () => {
             </div>
             <div>
               <h2>{t.asistente_titulo}</h2>
-              <p className="chatbot-status-tag">● {language === 'en' ? 'Online Assistant' : 'Asistente en Línea EmiTours'}</p>
+              <p className="chatbot-status-tag">● {t.contacto_online || (language === 'en' ? 'Online Assistant' : 'Asistente en Línea EmiTours')}</p>
             </div>
           </div>
 
@@ -176,11 +176,9 @@ const Contacto = () => {
             className="info-logo"
             alt="logo"
           />
-          <h3 className="info-title">Tu viaje comienza aquí</h3>
+          <h3 className="info-title">{t.contacto_info_title || "Tu viaje comienza aquí"}</h3>
           <p className="info-text">
-            En <b>EmiTours</b> transformamos tus ideas en experiencias 
-            inolvidables. Permítenos acompañarte con profesionalismo, 
-            energía y pasión por explorar Medellín y sus mejores destinos.
+            {t.contacto_info_text || "En EmiTours transformamos tus ideas en experiencias inolvidables. Permítenos acompañarte con profesionalismo, energía y pasión por explorar Medellín y sus mejores destinos."}
           </p>
         </div>
       </div>

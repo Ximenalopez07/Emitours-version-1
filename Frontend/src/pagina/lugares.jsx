@@ -70,9 +70,18 @@ export default function Lugares() {
         <div className="lugares-list">
           {listaLugares.map((lugar) => {
             const config = obtenerConfigTour(lugar.nombre);
-            const descripcionMostrada = language === 'en' && config?.descripcion_en
-              ? config.descripcion_en
-              : lugar.descripcion;
+            const lugarNorm = (lugar.nombre || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const descTraducida = t.places_desc && (
+              t.places_desc[lugar.nombre] ||
+              Object.entries(t.places_desc).find(([k]) => {
+                const kNorm = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                return kNorm === lugarNorm || lugarNorm.includes(kNorm) || kNorm.includes(lugarNorm);
+              })?.[1]
+            );
+
+            const descripcionMostrada = language === 'en'
+              ? (descTraducida || config?.descripcion_en || lugar.descripcion)
+              : (lugar.descripcion || descTraducida);
 
             return (
               <div key={lugar.id} className="lugar-card">

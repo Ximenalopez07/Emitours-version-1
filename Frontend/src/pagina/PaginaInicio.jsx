@@ -13,7 +13,7 @@ import logo from "../assets/logo.jpg";
 import robotImg from "../assets/robot-asistente.jpg";
 
 // Componente individual de Carrusel Horizontal para cada lugar
-function PlaceCarousel({ place }) {
+function PlaceCarousel({ place, t }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const touchStartX = useRef(0);
@@ -119,7 +119,7 @@ function PlaceCarousel({ place }) {
       {/* Información del Lugar en la parte inferior */}
       <div className="carousel-bottom-content">
         <div className="carousel-text-group">
-          <span className="carousel-tag">TOUR DESTACADO</span>
+          <span className="carousel-tag">{t?.home_featured_badge || "TOUR DESTACADO"}</span>
           <h3 className="carousel-place-title">{place.nombre}</h3>
           <p className="carousel-place-desc">{place.descripcion}</p>
         </div>
@@ -142,7 +142,7 @@ function PlaceCarousel({ place }) {
           </div>
 
           <Link to="/lugares" className="carousel-explore-link">
-            <span>Ver más detalles</span>
+            <span>{t?.home_see_details || "Ver más detalles"}</span>
             <FaArrowRight className="link-arrow-icon" />
           </Link>
         </div>
@@ -206,9 +206,15 @@ function PaginaInicio() {
     const fromDB = lugaresDB.find(
       (l) => l.nombre && l.nombre.toLowerCase().includes(nombreBuscar.toLowerCase())
     );
+    const nombre = fromDB?.nombre || nombreBuscar;
+    const translatedDesc = t.places_desc && (t.places_desc[nombre] || t.places_desc[nombreBuscar]);
+    const descripcion = language === "en"
+      ? (translatedDesc || fallbackDesc)
+      : (fromDB?.descripcion || fallbackDesc);
+
     return {
-      nombre: fromDB?.nombre || nombreBuscar,
-      descripcion: fromDB?.descripcion || fallbackDesc,
+      nombre,
+      descripcion,
       imagenes: imagenes
     };
   };
@@ -251,22 +257,21 @@ function PaginaInicio() {
         <div className="hero-inner-container">
           <div className="hero-text-card">
             <span className="hero-welcome-badge">
-              BIENVENIDO A EMITOURS
+              {t.home_welcome_badge || "BIENVENIDO A EMITOURS"}
             </span>
 
             <h1 className="hero-main-title">
-              Descubre Medellín<br />
-              <span className="hero-title-highlight">de una manera diferente</span>
+              {t.home_hero_title || "Descubre Medellín"}<br />
+              <span className="hero-title-highlight">{t.home_hero_sub_title || "de una manera diferente"}</span>
             </h1>
 
             <p className="hero-main-subtitle">
-              Vive experiencias únicas, conoce lugares increíbles
-              y explora la ciudad con nuestros guías locales.
+              {t.home_hero_desc || "Vive experiencias únicas, conoce lugares increíbles y explora la ciudad con nuestros guías locales."}
             </p>
 
             <div className="hero-actions">
               <Link to="/lugares" className="hero-primary-btn">
-                Explorar tours <span className="btn-arrow">→</span>
+                {t.home_explore_tours || "Explorar tours"} <span className="btn-arrow">→</span>
               </Link>
             </div>
           </div>
@@ -288,13 +293,13 @@ function PaginaInicio() {
               {/* LADO IZQUIERDO: TEXTO Y BOTÓN */}
               <div className="chatbot-banner-left">
                 <span className="chatbot-banner-eyebrow">
-                  ASISTENTE INTELIGENTE
+                  {t.home_ai_eyebrow || "ASISTENTE INTELIGENTE"}
                 </span>
                 <h3 className="chatbot-banner-title">
-                  ¿Tienes preguntas?
+                  {t.home_ai_title || "¿Tienes preguntas?"}
                 </h3>
                 <p className="chatbot-banner-text">
-                  Nuestro asistente virtual está disponible para ayudarte en todo momento.
+                  {t.home_ai_desc || "Nuestro asistente virtual está disponible para ayudarte en todo momento."}
                 </p>
                 <button
                   type="button"
@@ -302,7 +307,7 @@ function PaginaInicio() {
                   onClick={() => setIsChatOpen(true)}
                 >
                   <span className="btn-chat-icon">💬</span>
-                  <span>Hablar con el chatbot</span>
+                  <span>{t.home_ai_cta || "Hablar con el chatbot"}</span>
                   <span className="btn-arrow">→</span>
                 </button>
               </div>
@@ -311,24 +316,24 @@ function PaginaInicio() {
               <div className="chatbot-banner-right">
                 <div className="chatbot-speech-bubble">
                   <span className="speech-badge">EmiTours AI</span>
-                  <p className="speech-title">¡Hola!</p>
+                  <p className="speech-title">{t.home_speech_hello || "¡Hola!"}</p>
                   <p className="speech-body">
-                    Soy el asistente virtual de <strong>EmiTours</strong>.<br />
-                    ¿En qué puedo ayudarte?
+                    {t.home_speech_p1 || "Soy el asistente virtual de"} <strong>EmiTours</strong>.<br />
+                    {t.home_speech_p2 || "¿En qué puedo ayudarte?"}
                   </p>
                 </div>
 
                 <div
                   className="chatbot-robot-avatar"
                   onClick={() => setIsChatOpen(true)}
-                  title="Abrir Asistente Virtual"
+                  title={t.home_ai_cta || "Abrir Asistente Virtual"}
                 >
                   <img
                     src={robotImg}
                     alt="Robot Asistente Virtual EmiTours"
                     className="chatbot-robot-graphic"
                   />
-                  <span className="robot-status-dot" title="En línea"></span>
+                  <span className="robot-status-dot" title={t.chatbot_online || "En línea"}></span>
                 </div>
               </div>
             </div>
@@ -357,8 +362,8 @@ function PaginaInicio() {
 
               {/* DERECHA: TEXTO EXPLICATIVO */}
               <div className="quienes-somos-text-col">
-                <span className="section-pill-tag">QUIÉNES SOMOS</span>
-                <h2 className="quienes-somos-heading">Somos EmiTours</h2>
+                <span className="section-pill-tag">{t.home_about_pill || "QUIÉNES SOMOS"}</span>
+                <h2 className="quienes-somos-heading">{t.home_about_title || "Somos EmiTours"}</h2>
                 <p className="quienes-somos-paragraph">
                   {t.quienes_somos_desc ||
                     "Somos una agencia líder de turismo dedicada a brindar recorridos guiados inolvidables en Medellín y Antioquia con seguridad, comodidad y la mejor energía paisa."}
@@ -369,24 +374,24 @@ function PaginaInicio() {
                   <div className="feature-item">
                     <span className="feature-icon">🏔️</span>
                     <div>
-                      <strong>Guías Expertos</strong>
-                      <p>Acompañamiento local certificado</p>
+                      <strong>{t.home_feat_guides_title || "Guías Expertos"}</strong>
+                      <p>{t.home_feat_guides_desc || "Acompañamiento local certificado"}</p>
                     </div>
                   </div>
 
                   <div className="feature-item">
                     <span className="feature-icon">🛡️</span>
                     <div>
-                      <strong>100% Confiable</strong>
-                      <p>Seguridad y puntualidad garantizada</p>
+                      <strong>{t.home_feat_reliable_title || "100% Confiable"}</strong>
+                      <p>{t.home_feat_reliable_desc || "Seguridad y puntualidad garantizada"}</p>
                     </div>
                   </div>
 
                   <div className="feature-item">
                     <span className="feature-icon">🌟</span>
                     <div>
-                      <strong>Cultura Auténtica</strong>
-                      <p>Historias reales de Medellín</p>
+                      <strong>{t.home_feat_culture_title || "Cultura Auténtica"}</strong>
+                      <p>{t.home_feat_culture_desc || "Historias reales de Medellín"}</p>
                     </div>
                   </div>
                 </div>
@@ -402,16 +407,16 @@ function PaginaInicio() {
       <section className="lugares-destacados-section">
         <div className="container">
           <div className="destacados-title-block">
-            <span className="section-pill-tag">EXPERIENCIAS IMPERDIBLES</span>
-            <h2 className="destacados-section-title">Lugares Destacados</h2>
+            <span className="section-pill-tag">{t.home_destacados_pill || "EXPERIENCIAS IMPERDIBLES"}</span>
+            <h2 className="destacados-section-title">{t.home_destacados_title || "Lugares Destacados"}</h2>
             <p className="destacados-section-subtitle">
-              Disfruta cada rincón emblemático con nuestros recorridos diseñados para cautivarte.
+              {t.home_destacados_sub || "Disfruta cada rincón emblemático con nuestros recorridos diseñados para cautivarte."}
             </p>
           </div>
 
           <div className="carousels-stack">
             {featuredPlaces.map((lugar) => (
-              <PlaceCarousel key={lugar.nombre} place={lugar} />
+              <PlaceCarousel key={lugar.nombre} place={lugar} t={t} />
             ))}
           </div>
         </div>

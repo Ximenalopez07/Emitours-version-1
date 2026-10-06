@@ -942,12 +942,9 @@
   .carousel-place-desc {
     font-size: 14px;
     margin-bottom: 14px;
-    /* Truncar a 2 líneas en pantallas muy pequeñas */
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    line-height: 1.5;
+    white-space: normal;
+    overflow: visible;
   }
 
   .carousel-arrow {

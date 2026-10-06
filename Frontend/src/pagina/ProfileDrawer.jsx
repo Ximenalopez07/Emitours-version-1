@@ -14,7 +14,7 @@ export default function ProfileDrawer({ isOpen, onClose }) {
   const [nombre, setNombre] = useState(user?.nombre_usuario || "");
   const [telefonoE164, setTelefonoE164] = useState(user?.telefono || "");
   const [isTelefonoValid, setIsTelefonoValid] = useState(true);
-  const [foto, setFoto] = useState(user?.foto || "");
+  const [foto, setFoto] = useState(user?.picture || user?.foto || "");
   const [errorProfile, setErrorProfile] = useState(null);
 
   if (!isOpen) return null;
@@ -58,7 +58,7 @@ export default function ProfileDrawer({ isOpen, onClose }) {
   const handleCancelProfile = () => {
     setNombre(user?.nombre_usuario || "");
     setTelefonoE164(user?.telefono || "");
-    setFoto(user?.foto || "");
+    setFoto(user?.picture || user?.foto || "");
     setErrorProfile(null);
     setIsEditing(false);
   };
@@ -90,8 +90,10 @@ export default function ProfileDrawer({ isOpen, onClose }) {
     }
   };
 
-  const defaultAvatar = "https://www.w3schools.com/howto/img_avatar.png";
-  const userAvatar = user?.foto || defaultAvatar;
+  const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cbd5e1'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+  const userAvatar = (user?.picture && typeof user.picture === "string" && user.picture.trim())
+    || (user?.foto && typeof user.foto === "string" && user.foto.trim())
+    || defaultAvatar;
 
   return (
     <>
@@ -106,7 +108,16 @@ export default function ProfileDrawer({ isOpen, onClose }) {
           {/* SECCIÓN 1: PERFIL */}
           <div className="drawer-section">
             <div className="avatar-container">
-              <img src={userAvatar} alt="Avatar" className="user-avatar" />
+              <img 
+                src={userAvatar} 
+                alt="Avatar" 
+                className="user-avatar"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = defaultAvatar;
+                }}
+              />
             </div>
 
             {!isEditing ? (

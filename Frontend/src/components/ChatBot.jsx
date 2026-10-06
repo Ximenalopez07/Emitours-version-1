@@ -90,7 +90,7 @@ const ChatBot = ({ isOpen: controlledIsOpen, onClose: controlledOnClose, hideFlo
     setEscribiendo(true);
 
     try {
-      const res = await enviarMensajeChatbot({ mensaje: textoUsuario });
+      const res = await enviarMensajeChatbot({ mensaje: textoUsuario, language });
       const respuestaBot = res.data.respuesta || (language === 'en' ? "Sorry, I couldn't process your request." : "Lo siento, no pude procesar tu mensaje.");
       
       setChatHistory([
@@ -142,7 +142,7 @@ const ChatBot = ({ isOpen: controlledIsOpen, onClose: controlledOnClose, hideFlo
               <div>
                 <h3>{t.asistente_titulo || "Asistente IA EmiTours"}</h3>
                 <span className="status-online">
-                  {language === 'en' ? '● Online | Real-time assistant' : '● En línea | Consulta en tiempo real'}
+                  {t.contacto_online ? `● ${t.contacto_online}` : (language === 'en' ? '● Online | Real-time assistant' : '● En línea | Consulta en tiempo real')}
                 </span>
               </div>
             </div>
@@ -155,10 +155,10 @@ const ChatBot = ({ isOpen: controlledIsOpen, onClose: controlledOnClose, hideFlo
           {!isAuthenticated ? (
             <div className="chatbot-auth-required">
               <FaUserLock className="lock-icon" />
-              <h4>{language === 'en' ? 'Access Required' : 'Acceso Requerido'}</h4>
+              <h4>{t.chatbot_access_required || (language === 'en' ? 'Access Required' : 'Acceso Requerido')}</h4>
               <p>{t.chatbot_auth_requerida || "Para utilizar nuestro asistente virtual debes registrarte e iniciar sesión."}</p>
               <a href="/inicioseccion" className="btn-go-login">
-                {language === 'en' ? 'Sign In / Register' : 'Iniciar Sesión / Registrarme'}
+                {t.chatbot_btn_login || (language === 'en' ? 'Sign In / Register' : 'Iniciar Sesión / Registrarme')}
               </a>
             </div>
           ) : (

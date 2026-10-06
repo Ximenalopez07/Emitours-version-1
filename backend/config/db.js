@@ -32,16 +32,15 @@ pool.getConnection((err, connection) => {
     if (!errMod) console.log("Columna 'estado_pago' verificada.");
   });
 
-  // Asegurar columnas para País, Tipo de Documento, Verificación de Correo y Recuperación de Contraseña
+  // Asegurar columnas requeridas en registro_usuarios
   const columnsToCheck = [
     { name: 'pais', def: "VARCHAR(100) NOT NULL DEFAULT 'Colombia'" },
     { name: 'tipo_documento', def: "VARCHAR(50) NOT NULL DEFAULT 'Cédula de ciudadanía'" },
     { name: 'email_verificado', def: "TINYINT(1) NOT NULL DEFAULT 1" },
-    { name: 'codigo_verificacion', def: "VARCHAR(10) NULL" },
-    { name: 'codigo_verificacion_expira', def: "DATETIME NULL" },
     { name: 'codigo_recuperacion', def: "VARCHAR(10) NULL" },
     { name: 'codigo_recuperacion_expira', def: "DATETIME NULL" },
-    { name: 'google_id', def: "VARCHAR(100) NULL UNIQUE" }
+    { name: 'google_id', def: "VARCHAR(100) NULL UNIQUE" },
+    { name: 'fecha_registro', def: "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" }
   ];
 
   let completedCols = 0;
@@ -57,6 +56,39 @@ pool.getConnection((err, connection) => {
         if (completedCols === columnsToCheck.length) checkIndexes();
       }
     });
+  });
+
+  // Eliminar columnas obsoletas: codigo_verificacion, codigo_verificacion_expira, idioma y sexo
+  connection.query("SHOW COLUMNS FROM registro_usuarios LIKE 'codigo_verificacion'", (errCol, resCol) => {
+    if (!errCol && resCol && resCol.length > 0) {
+      connection.query("ALTER TABLE registro_usuarios DROP COLUMN codigo_verificacion", () => {
+        console.log("Columna obsoleta 'codigo_verificacion' eliminada de registro_usuarios.");
+      });
+    }
+  });
+
+  connection.query("SHOW COLUMNS FROM registro_usuarios LIKE 'codigo_verificacion_expira'", (errCol, resCol) => {
+    if (!errCol && resCol && resCol.length > 0) {
+      connection.query("ALTER TABLE registro_usuarios DROP COLUMN codigo_verificacion_expira", () => {
+        console.log("Columna obsoleta 'codigo_verificacion_expira' eliminada de registro_usuarios.");
+      });
+    }
+  });
+
+  connection.query("SHOW COLUMNS FROM registro_usuarios LIKE 'idioma'", (errCol, resCol) => {
+    if (!errCol && resCol && resCol.length > 0) {
+      connection.query("ALTER TABLE registro_usuarios DROP COLUMN idioma", () => {
+        console.log("Columna 'idioma' eliminada permanentemente de registro_usuarios.");
+      });
+    }
+  });
+
+  connection.query("SHOW COLUMNS FROM registro_usuarios LIKE 'sexo'", (errCol, resCol) => {
+    if (!errCol && resCol && resCol.length > 0) {
+      connection.query("ALTER TABLE registro_usuarios DROP COLUMN sexo", () => {
+        console.log("Columna 'sexo' eliminada permanentemente de registro_usuarios.");
+      });
+    }
   });
 
   function checkIndexes() {
@@ -80,27 +112,13 @@ pool.getConnection((err, connection) => {
     });
   }
 
-  // Asegurar tabla registro_pendiente para verificación previa de cuentas
-  connection.query(`
-    CREATE TABLE IF NOT EXISTS registro_pendiente (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      nombre_usuario VARCHAR(100) NOT NULL,
-      edad INT DEFAULT 18,
-      sexo VARCHAR(50) DEFAULT 'Otro',
-      pais VARCHAR(100) NOT NULL DEFAULT 'Colombia',
-      tipo_documento VARCHAR(50) NOT NULL DEFAULT 'Cédula de ciudadanía',
-      cedula VARCHAR(50) NOT NULL,
-      telefono VARCHAR(50) NULL,
-      correo_electronico VARCHAR(150) NOT NULL UNIQUE,
-      contrasena VARCHAR(255) NOT NULL,
-      codigo_verificacion VARCHAR(10) NOT NULL,
-      codigo_expira DATETIME NOT NULL,
-      intentos INT NOT NULL DEFAULT 0,
-      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `, (errPend) => {
-    if (!errPend) console.log("Tabla 'registro_pendiente' verificada.");
-    else console.error("Error al verificar tabla 'registro_pendiente':", errPend);
+  // ELIMINAR COMPLETAMENTE Y DE FORMA PERMANENTE LA TABLA registro_pendiente
+  connection.query("DROP TABLE IF EXISTS registro_pendiente", (errDrop) => {
+    if (!errDrop) {
+      console.log("Tabla 'registro_pendiente' eliminada permanentemente del sistema.");
+    } else {
+      console.error("Error al eliminar 'registro_pendiente':", errDrop);
+    }
   });
 
   connection.release();

@@ -95,8 +95,7 @@ export default function AdminUsuarios() {
       Documento: u.cedula || 'N/A',
       Correo: u.correo_electronico,
       Teléfono: u.telefono || 'N/A',
-      Edad: u.edad || 'N/A',
-      Sexo: u.sexo || 'N/A'
+      Edad: u.edad || 'N/A'
     }));
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
@@ -119,12 +118,11 @@ export default function AdminUsuarios() {
       u.cedula || 'N/A',
       u.correo_electronico || 'N/A',
       u.telefono || 'N/A',
-      u.edad ? `${u.edad} años` : 'N/A',
-      u.sexo || 'N/A'
+      u.edad ? `${u.edad} años` : 'N/A'
     ]);
 
     const tableConfig = {
-      head: [['ID', 'Usuario', 'Documento', 'Correo Electrónico', 'Teléfono', 'Edad', 'Sexo']],
+      head: [['ID', 'Usuario', 'Documento', 'Correo Electrónico', 'Teléfono', 'Edad']],
       body: tableData,
       startY: 28,
       headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -132,12 +130,11 @@ export default function AdminUsuarios() {
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
         0: { cellWidth: 16 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 26 },
-        3: { cellWidth: 45 },
-        4: { cellWidth: 28 },
-        5: { cellWidth: 18 },
-        6: { cellWidth: 18 }
+        1: { cellWidth: 38 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 50 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 22 }
       }
     };
 
@@ -207,7 +204,7 @@ export default function AdminUsuarios() {
                 <th>Cédula / Documento</th>
                 <th>Correo Electrónico</th>
                 <th>Teléfono</th>
-                <th>Edad / Sexo</th>
+                <th>Edad</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -243,7 +240,7 @@ export default function AdminUsuarios() {
                     <td>{u.telefono || 'No registrado'}</td>
                     <td>
                       <span className="table-demographics">
-                        {u.edad ? `${u.edad} años` : 'N/A'} • {u.sexo || 'Otro'}
+                        {u.edad ? `${u.edad} años` : 'N/A'}
                       </span>
                     </td>
                     <td>
@@ -313,10 +310,6 @@ export default function AdminUsuarios() {
               <div className="detail-field">
                 <label>Edad</label>
                 <p>{selectedUserDetail.edad ? `${selectedUserDetail.edad} años` : 'No registrada'}</p>
-              </div>
-              <div className="detail-field">
-                <label>Sexo</label>
-                <p>{selectedUserDetail.sexo || 'Otro'}</p>
               </div>
               <div className="detail-field">
                 <label>Rol en Plataforma</label>
@@ -393,28 +386,15 @@ export default function AdminUsuarios() {
                 />
               </div>
 
-              <div className="form-group-row">
-                <div className="form-group-field">
-                  <label>Edad</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={editingUser.edad || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, edad: e.target.value })}
-                  />
-                </div>
-                <div className="form-group-field">
-                  <label>Sexo</label>
-                  <select
-                    value={editingUser.sexo || 'Otro'}
-                    onChange={(e) => setEditingUser({ ...editingUser, sexo: e.target.value })}
-                  >
-                    <option value="Masculino">Masculino</option>
-                    <option value="Femenino">Femenino</option>
-                    <option value="Otro">Otro</option>
-                  </select>
-                </div>
+              <div className="form-group-field">
+                <label>Edad</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={editingUser.edad || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, edad: e.target.value })}
+                />
               </div>
 
               <div className="modal-actions-end">

@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import { UIProvider } from "./context/UIContext";
+import "./i18n";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "./index.css";
 

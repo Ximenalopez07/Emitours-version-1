@@ -120,6 +120,8 @@
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   display: flex;
   flex-direction: column;
+  height: auto;
+  min-height: min-content;
 }
 
 .tour-card-reserva:hover,
@@ -192,6 +194,11 @@
   line-height: 1.55;
   margin-bottom: 16px;
   flex-grow: 1;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow: visible;
+  max-height: none;
 }
 
 .tour-meta-row {

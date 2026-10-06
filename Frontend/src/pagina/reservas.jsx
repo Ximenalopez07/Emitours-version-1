@@ -50,7 +50,7 @@ export const configuracionTours = {
   },
   "Pablo Escobar": {
     descripcion: "Tour histórico e informativo sobre el impacto, la memoria y la transformación social de la época de Pablo Escobar en Medellín.",
-    descripcion_en: "Historical and informative tour on the impact, memory, and social transformation of the Pablo Escobar era in Medellín.",
+    descripcion_en: "Using drug trafficking money and with his political and criminal aspirations present, Pablo Escobar decided to offer \"free houses\" to the homeless and the poorest of Medellín by ordering the initial construction of 250 houses for families who lived in the municipal garbage dump. The National Government ordered them demolished upon learning they came from drug trafficking.",
     precio: 150000,
     duracion: "4 Horas",
     duracion_en: "4 Hours",

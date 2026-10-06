@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 // ================= GESTIÓN DE USUARIOS (CLIENTES) =================
 exports.getUsuarios = (req, res) => {
   db.query(
-    "SELECT id_registro, nombre_usuario, edad, sexo, cedula, correo_electronico, telefono, foto, rol, 'Activo' as estado, CURRENT_TIMESTAMP as fecha_registro FROM registro_usuarios WHERE rol != 'admin' OR rol IS NULL ORDER BY id_registro DESC",
+    "SELECT id_registro, nombre_usuario, edad, cedula, correo_electronico, telefono, foto, rol, 'Activo' as estado, CURRENT_TIMESTAMP as fecha_registro FROM registro_usuarios WHERE rol != 'admin' OR rol IS NULL ORDER BY id_registro DESC",
     (err, result) => {
       if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
       res.json(result);
@@ -14,9 +14,9 @@ exports.getUsuarios = (req, res) => {
 
 exports.updateUsuarioAdmin = (req, res) => {
   const { id } = req.params;
-  const { nombre_usuario, edad, sexo, cedula, correo_electronico, telefono, foto } = req.body;
-  const sql = "UPDATE registro_usuarios SET nombre_usuario=?, edad=?, sexo=?, cedula=?, correo_electronico=?, telefono=?, foto=? WHERE id_registro=?";
-  db.query(sql, [nombre_usuario, edad || 18, sexo || 'Otro', cedula, correo_electronico, telefono, foto, id], (err) => {
+  const { nombre_usuario, edad, cedula, correo_electronico, telefono, foto } = req.body;
+  const sql = "UPDATE registro_usuarios SET nombre_usuario=?, edad=?, cedula=?, correo_electronico=?, telefono=?, foto=? WHERE id_registro=?";
+  db.query(sql, [nombre_usuario, edad || 18, cedula, correo_electronico, telefono, foto, id], (err) => {
     if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
     res.json({ status: 'OK', mensaje: "Usuario actualizado correctamente por el administrador" });
   });
@@ -58,7 +58,7 @@ exports.getAdministradores = (req, res) => {
 exports.createAdministrador = async (req, res) => {
   const { nombre, correo, contrasena, telefono, cedula } = req.body;
   try {
-    const sql = "INSERT INTO registro_usuarios (nombre_usuario, edad, sexo, cedula, correo_electronico, contrasena, telefono, rol) VALUES (?, 30, 'Otro', ?, ?, ?, ?, 'admin')";
+    const sql = "INSERT INTO registro_usuarios (nombre_usuario, edad, cedula, correo_electronico, contrasena, telefono, rol) VALUES (?, 30, ?, ?, ?, ?, 'admin')";
     db.query(sql, [nombre, cedula || String(Date.now()), correo, contrasena || 'Admin123*', telefono], (err, result) => {
       if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
       res.json({ status: 'OK', mensaje: "Administrador creado exitosamente", id: result.insertId });

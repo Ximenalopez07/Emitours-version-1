@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { AdminAuthContext } from '../context/AdminAuthContext';
+import { useTranslation } from '../context/UIContext';
 import {
   FaChartPie,
   FaUsers,
@@ -19,6 +20,7 @@ import './AdminLayout.css';
 
 export default function AdminLayout() {
   const { admin, logout } = useContext(AdminAuthContext);
+  const { t, language } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -28,12 +30,12 @@ export default function AdminLayout() {
 
   // Secciones solicitadas del Menú del Administrador
   const menuItems = [
-    { path: '/admin/dashboard', label: 'Dashboard', icon: <FaChartPie /> },
-    { path: '/admin/usuarios', label: 'Usuarios', icon: <FaUsers /> },
-    { path: '/admin/lugares', label: 'Lugares', icon: <FaMapMarkedAlt /> },
-    { path: '/admin/guias', label: 'Guías', icon: <FaUserFriends /> },
-    { path: '/admin/reservas', label: 'Reservas', icon: <FaCalendarCheck /> },
-    { path: '/admin/configuracion', label: 'Configuración', icon: <FaCog /> },
+    { path: '/admin/dashboard', label: t.admin_dashboard || 'Dashboard', icon: <FaChartPie /> },
+    { path: '/admin/usuarios', label: t.admin_usuarios || (language === 'en' ? 'Users' : 'Usuarios'), icon: <FaUsers /> },
+    { path: '/admin/lugares', label: t.admin_lugares || (language === 'en' ? 'Places' : 'Lugares'), icon: <FaMapMarkedAlt /> },
+    { path: '/admin/guias', label: t.admin_guias || (language === 'en' ? 'Guides' : 'Guías'), icon: <FaUserFriends /> },
+    { path: '/admin/reservas', label: t.admin_reservas || (language === 'en' ? 'Bookings' : 'Reservas'), icon: <FaCalendarCheck /> },
+    { path: '/admin/configuracion', label: t.admin_configuracion || (language === 'en' ? 'Settings' : 'Configuración'), icon: <FaCog /> },
   ];
 
   const [searchFocused, setSearchFocused] = useState(false);
@@ -93,7 +95,7 @@ export default function AdminLayout() {
         </div>
 
         <nav className="admin-sidebar-menu">
-          <div className="menu-group-label">{!collapsed && "NAVEGACIÓN PRINCIPAL"}</div>
+          <div className="menu-group-label">{!collapsed && (language === 'en' ? "MAIN NAVIGATION" : "NAVEGACIÓN PRINCIPAL")}</div>
           {menuItems.map((item) => {
             const active = location.pathname === item.path;
             return (
@@ -114,10 +116,10 @@ export default function AdminLayout() {
           <button
             className="logout-btn"
             onClick={() => setShowLogoutConfirm(true)}
-            title="Cerrar sesión"
+            title={t.cerrar_sesion || "Cerrar sesión"}
           >
             <FaSignOutAlt />
-            {!collapsed && <span>Cerrar sesión</span>}
+            {!collapsed && <span>{t.cerrar_sesion || "Cerrar sesión"}</span>}
           </button>
         </div>
       </aside>
@@ -134,7 +136,7 @@ export default function AdminLayout() {
               <FaSearch className="search-icon" />
               <input
                 type="text"
-                placeholder="Buscar (Usuarios, Lugares, Guías, Reservas)..."
+                placeholder={language === 'en' ? "Search (Users, Places, Guides, Bookings)..." : "Buscar (Usuarios, Lugares, Guías, Reservas)..."}
                 value={searchQuery}
                 onFocus={() => setSearchFocused(true)}
                 onChange={(e) => {
@@ -323,10 +325,10 @@ export default function AdminLayout() {
               <FaSignOutAlt />
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>
-              ¿Deseas cerrar tu sesión?
+              {language === 'en' ? "Do you want to log out?" : "¿Deseas cerrar tu sesión?"}
             </h3>
             <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px' }}>
-              Regresarás a la página de inicio de sesión de EmiTours.
+              {language === 'en' ? "You will return to the EmiTours sign-in page." : "Regresarás a la página de inicio de sesión de EmiTours."}
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
@@ -334,14 +336,14 @@ export default function AdminLayout() {
                 className="btn-secondary-action"
                 onClick={() => setShowLogoutConfirm(false)}
               >
-                Cancelar
+                {t.cancelar || "Cancelar"}
               </button>
               <button
                 type="button"
                 className="btn-danger-action"
                 onClick={handleLogout}
               >
-                Sí, Cerrar sesión
+                {language === 'en' ? "Yes, Log out" : "Sí, Cerrar sesión"}
               </button>
             </div>
           </div>
