@@ -58,8 +58,12 @@ exports.getAdministradores = (req, res) => {
 exports.createAdministrador = async (req, res) => {
   const { nombre, correo, contrasena, telefono, cedula } = req.body;
   try {
+    const rawPass = contrasena || 'Admin123*';
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(rawPass, salt);
+
     const sql = "INSERT INTO registro_usuarios (nombre_usuario, edad, cedula, correo_electronico, contrasena, telefono, rol) VALUES (?, 30, ?, ?, ?, ?, 'admin')";
-    db.query(sql, [nombre, cedula || String(Date.now()), correo, contrasena || 'Admin123*', telefono], (err, result) => {
+    db.query(sql, [nombre, cedula || String(Date.now()), correo, hashedPassword, telefono], (err, result) => {
       if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
       res.json({ status: 'OK', mensaje: "Administrador creado exitosamente", id: result.insertId });
     });
@@ -73,8 +77,11 @@ exports.updateAdministrador = async (req, res) => {
   const { nombre, correo, telefono, contrasena } = req.body;
   try {
     if (contrasena && contrasena.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(contrasena, salt);
+
       const sql = "UPDATE registro_usuarios SET nombre_usuario=?, correo_electronico=?, telefono=?, contrasena=? WHERE id_registro=? AND rol='admin'";
-      db.query(sql, [nombre, correo, telefono, contrasena, id], (err) => {
+      db.query(sql, [nombre, correo, telefono, hashedPassword, id], (err) => {
         if (err) return res.status(500).json(err);
         res.json({ mensaje: "Administrador actualizado con nueva contraseña" });
       });

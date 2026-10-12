@@ -408,10 +408,48 @@ function InicioSeccion() {
     e.preventDefault();
     setAlertaGeneral(null);
 
-    if (!adminCorreo || !adminPass) {
+    // 1. Validar correo obligatorio
+    if (!adminCorreo || adminCorreo.length === 0) {
       setAlertaGeneral({
         tipo: "error",
-        texto: language === "en" ? "You must enter your admin email and password." : "Debes ingresar tu correo y contraseña de administrador."
+        texto: language === "en" ? "Enter your email" : "Ingresa tu correo electrónico"
+      });
+      return;
+    }
+
+    // 2. Prohibir espacios en el correo electrónico
+    if (/\s/.test(adminCorreo)) {
+      setAlertaGeneral({
+        tipo: "error",
+        texto: language === "en" ? "Email cannot contain spaces" : "El correo electrónico no puede contener espacios"
+      });
+      return;
+    }
+
+    // 3. Validar formato de correo electrónico
+    const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    if (!EMAIL_REGEX.test(adminCorreo)) {
+      setAlertaGeneral({
+        tipo: "error",
+        texto: language === "en" ? "Enter a valid email" : "Ingresa un correo electrónico válido"
+      });
+      return;
+    }
+
+    // 4. Validar contraseña obligatoria
+    if (!adminPass || adminPass.length === 0) {
+      setAlertaGeneral({
+        tipo: "error",
+        texto: language === "en" ? "Enter your password" : "Ingresa tu contraseña"
+      });
+      return;
+    }
+
+    // 5. Prohibir espacios en la contraseña
+    if (/\s/.test(adminPass)) {
+      setAlertaGeneral({
+        tipo: "error",
+        texto: language === "en" ? "Password cannot contain spaces" : "La contraseña no puede contener espacios"
       });
       return;
     }
@@ -419,14 +457,12 @@ function InicioSeccion() {
     setCargandoAdmin(true);
 
     try {
-      await adminLoginSubmit(adminCorreo.trim(), adminPass);
+      await adminLoginSubmit(adminCorreo, adminPass);
       window.location.href = "/admin/dashboard";
     } catch (err) {
-      console.error("Error en login de administrador:", err);
       const msg =
         err.response?.data?.mensaje ||
-        err.message ||
-        (language === "en" ? "Incorrect administrative credentials." : "Credenciales administrativas incorrectas.");
+        (language === "en" ? "Incorrect email or password." : "Correo electrónico o contraseña incorrectos");
       setAlertaGeneral({ tipo: "error", texto: msg });
     } finally {
       setCargandoAdmin(false);
@@ -483,7 +519,37 @@ function InicioSeccion() {
                   type="email"
                   placeholder="admin@emitours.com"
                   value={adminCorreo}
-                  onChange={(e) => setAdminCorreo(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/\s/.test(val)) {
+                      setAlertaGeneral({
+                        tipo: "error",
+                        texto: language === "en" ? "Email cannot contain spaces" : "El correo electrónico no puede contener espacios"
+                      });
+                      setAdminCorreo(val.replace(/\s+/g, ''));
+                    } else {
+                      setAdminCorreo(val);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Spacebar') {
+                      e.preventDefault();
+                      setAlertaGeneral({
+                        tipo: "error",
+                        texto: language === "en" ? "Email cannot contain spaces" : "El correo electrónico no puede contener espacios"
+                      });
+                    }
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (/\s/.test(pasted)) {
+                      e.preventDefault();
+                      setAlertaGeneral({
+                        tipo: "error",
+                        texto: language === "en" ? "Email cannot contain spaces" : "El correo electrónico no puede contener espacios"
+                      });
+                    }
+                  }}
                   className="auth-input"
                   required
                 />
@@ -496,7 +562,36 @@ function InicioSeccion() {
                     type={showAdminPass ? "text" : "password"}
                     placeholder="••••••••"
                     value={adminPass}
-                    onChange={(e) => setAdminPass(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/\s/.test(val)) {
+                        setAlertaGeneral({
+                          tipo: "error",
+                          texto: language === "en" ? "Password cannot contain spaces" : "La contraseña no puede contener espacios"
+                        });
+                        return; // Impedir que el espacio se incorpore al valor del campo
+                      }
+                      setAdminPass(val);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Spacebar') {
+                        e.preventDefault();
+                        setAlertaGeneral({
+                          tipo: "error",
+                          texto: language === "en" ? "Password cannot contain spaces" : "La contraseña no puede contener espacios"
+                        });
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const pasted = e.clipboardData.getData('text');
+                      if (/\s/.test(pasted)) {
+                        e.preventDefault();
+                        setAlertaGeneral({
+                          tipo: "error",
+                          texto: language === "en" ? "Password cannot contain spaces" : "La contraseña no puede contener espacios"
+                        });
+                      }
+                    }}
                     className="auth-input"
                     required
                   />

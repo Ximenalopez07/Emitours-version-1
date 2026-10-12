@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { enviarNotificacionNuevaReserva } = require('../utils/mailer');
 
 // Helper para convertir hora a formato TIME 'HH:MM:SS'
 function formatTimeToSql(hStr) {
@@ -201,16 +202,45 @@ exports.create = (req, res) => {
       ], (errInsert, resInsert) => {
         if (errInsert) return res.status(500).json({ status: 'ERROR', mensaje: errInsert.sqlMessage || errInsert.message });
 
-        db.query("INSERT INTO notificaciones (tipo, mensaje) VALUES ('Reserva', ?)", [
-          `Nueva reserva ${codigo} recibida para ${lugar.nombre} (${cantidadPersonas} pers, Idioma: ${idiomaClean === 'en' ? 'Inglés' : 'Español'}).`
-        ], () => {});
+        // Consultar datos reales del cliente registrado para la notificación
+        db.query("SELECT nombre_usuario, correo_electronico, telefono FROM registro_usuarios WHERE id_registro = ?", [uId], (errUser, resUser) => {
+          const cliente = (resUser && resUser.length > 0) ? resUser[0] : null;
+          const clienteNombre = cliente?.nombre_usuario || req.body.nombre_completo || 'Cliente EmiTours';
+          const clienteCorreo = cliente?.correo_electronico || req.body.correo_electronico || 'No especificado';
+          const clienteTelefono = cliente?.telefono || req.body.celular || 'No especificado';
 
-        res.json({
-          status: 'OK',
-          mensaje: '✅ Reserva registrada exitosamente.',
-          codigo,
-          reservaId: resInsert.insertId,
-          reservasRestantesFecha: 20 - (totalReservas + 1)
+          // Enviar notificación por correo al Administrador (asíncrono y a prueba de fallos)
+          enviarNotificacionNuevaReserva({
+            codigo,
+            clienteNombre,
+            clienteCorreo,
+            clienteTelefono,
+            tourNombre: lugar.nombre,
+            fecha: fechaStr,
+            hora: hora || horaSql,
+            numeroPersonas: cantidadPersonas,
+            idioma: (idiomaClean === 'en') ? 'Inglés' : 'Español',
+            precioTotal,
+            metodoPago: metodoPagoEnum.toUpperCase(),
+            estadoReserva: estadoEnum,
+            estadoPago: estadoPagoEnum === 'pagado' ? 'Pagado (100%)' : 'Parcial (50% abonado)'
+          }).catch(errMail => {
+            console.error(`[Reserva Controller] ❌ Error no bloqueante al enviar correo de reserva ${codigo}:`, errMail.message);
+          });
+
+          // Notificación interna
+          db.query("INSERT INTO notificaciones (tipo, mensaje) VALUES ('Reserva', ?)", [
+            `Nueva reserva ${codigo} recibida para ${lugar.nombre} (${cantidadPersonas} pers, Idioma: ${idiomaClean === 'en' ? 'Inglés' : 'Español'}).`
+          ], () => {});
+
+          // Responder al cliente confirmando que la reserva se guardó en MySQL
+          res.json({
+            status: 'OK',
+            mensaje: '✅ Reserva registrada exitosamente.',
+            codigo,
+            reservaId: resInsert.insertId,
+            reservasRestantesFecha: 20 - (totalReservas + 1)
+          });
         });
       });
     });

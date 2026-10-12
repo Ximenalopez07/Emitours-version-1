@@ -24,8 +24,6 @@ export const responderAdminContacto = (id, data) => api.put(`/contacto/admin/${i
 
 export const enviarMensajeChatbot = (mensajeData) => api.post('/chatbot/message', mensajeData);
 export const getAdminChatbotHistory = () => api.get('/chatbot/admin/history');
-export const getAdminChatbotConfig = () => api.get('/chatbot/admin/config');
-export const updateAdminChatbotConfig = (data) => api.put('/chatbot/admin/config', data);
 
 export const loginUsuario = (credenciales) => api.post('/usuarios/login', credenciales);
 export const googleLoginUsuario = (tokenData) => api.post('/usuarios/google-login', tokenData);

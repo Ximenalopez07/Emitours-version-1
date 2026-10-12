@@ -27,7 +27,6 @@ router.post('/message', verifyUserToken, chatbotController.procesarMensaje);
 
 // Rutas de administración
 router.get('/admin/history', chatbotController.getHistorialAdmin);
-router.get('/admin/config', chatbotController.getConfigAdmin);
-router.put('/admin/config', chatbotController.updateConfigAdmin);
 
 module.exports = router;
+

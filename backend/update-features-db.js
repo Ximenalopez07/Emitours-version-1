@@ -49,17 +49,8 @@ async function updateSchema() {
       usuario_id INT NOT NULL,
       mensaje_usuario TEXT NOT NULL,
       respuesta_ia TEXT NOT NULL,
-      fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `, (e, r) => e ? rej(e) : res(r)));
-
-  // 5. Crear tabla chatbot_config
-  await new Promise((res, rej) => db.query(`
-    CREATE TABLE IF NOT EXISTS chatbot_config (
-      id INT PRIMARY KEY DEFAULT 1,
-      activo TINYINT(1) DEFAULT 1,
-      mensaje_bienvenida TEXT,
-      faq TEXT
+      fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_chatbot_usuario (usuario_id)
     )
   `, (e, r) => e ? rej(e) : res(r)));
 

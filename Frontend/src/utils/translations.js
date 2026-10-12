@@ -186,15 +186,20 @@ export const translations = {
     error_horario_invalido: "El horario disponible para realizar reservas es de 7:00 AM a 7:00 PM.",
     error_metodo_pago_invalido: "Método de pago no válido. Selecciona Nequi, PSE, Pago en efectivo o Datáfono.",
 
-    // Chatbot IA
+    // Chatbot IA (Menú Enumerado)
     asistente_titulo: "Asistente EmiTours",
-    chatbot_bienvenida: "¡Hola! 👋 Soy el asistente virtual de EmiTours. Puedo ayudarte con información sobre nuestros tours, lugares, precios, horarios, disponibilidad, métodos de pago y cualquier inquietud que tengas.",
-    chatbot_disclaimer: "ℹ️ Este chatbot es exclusivamente informativo y no crea ni modifica reservas.",
-    chatbot_placeholder: "Pregunta sobre tours, disponibilidad o preguntas frecuentes...",
-    chatbot_escribiendo: "Asistente EmiTours está escribiendo...",
+    chatbot_bienvenida: "¡Hola! 👋 Bienvenido al asistente virtual de EmiTours.\n\nEstoy aquí para ayudarte a conocer nuestros servicios.\n\nSelecciona el número de la pregunta que deseas consultar:",
+    chatbot_disclaimer: "ℹ️ Este chatbot funciona mediante un menú de opciones y no modifica reservas.",
+    chatbot_placeholder: "Escribe un número del 1 al 10 (o 0 para menú)...",
+    chatbot_escribiendo: "Asistente EmiTours está consultando...",
     chatbot_auth_requerida: "Para utilizar el asistente virtual de EmiTours debes registrarte e iniciar sesión.",
     chatbot_btn_login: "Iniciar sesión",
     chatbot_btn_registro: "Registrarme",
+    chatbot_btn_volver_menu: "Volver al menú",
+    chatbot_pregunta_invalida: "Por favor, selecciona un número del 1 al 10 para que pueda ayudarte. 😊",
+    chatbot_presupuesto_placeholder: "Ingresa tu presupuesto (ej: 100000)",
+    chatbot_presupuesto_btn: "Consultar tours",
+    chatbot_fecha_btn: "Verificar disponibilidad",
     chatbot_como_reservar_info: "Puedes realizar tu reserva desde la sección de Reservas de EmiTours. Allí podrás seleccionar el lugar, la fecha, la hora, la cantidad de personas y el método de pago.",
     chatbot_access_required: "Acceso Requerido",
 
@@ -511,15 +516,20 @@ export const translations = {
     error_horario_invalido: "Booking time must be between 7:00 AM and 7:00 PM.",
     error_metodo_pago_invalido: "Invalid payment method. Choose Nequi, PSE, Cash, or Card Terminal.",
 
-    // Chatbot AI
+    // Chatbot AI (Numbered Menu)
     asistente_titulo: "EmiTours Assistant",
-    chatbot_bienvenida: "Hello! 👋 I am EmiTours virtual assistant. I can help you with information about our tours, locations, prices, schedules, availability, payment methods, and any questions you might have.",
-    chatbot_disclaimer: "ℹ️ This chatbot is strictly informational and does not create or modify reservations.",
-    chatbot_placeholder: "Ask about tours, schedules, availability or FAQ...",
-    chatbot_escribiendo: "EmiTours Assistant is typing...",
+    chatbot_bienvenida: "Hello! 👋 Welcome to EmiTours virtual assistant.\n\nI am here to help you learn about our services.\n\nSelect the number of the question you want to ask:",
+    chatbot_disclaimer: "ℹ️ This chatbot operates via a numbered menu and does not modify reservations.",
+    chatbot_placeholder: "Type a number from 1 to 10 (or 0 for menu)...",
+    chatbot_escribiendo: "EmiTours Assistant is checking...",
     chatbot_auth_requerida: "To use the virtual assistant of EmiTours you must register and log in.",
     chatbot_btn_login: "Sign In",
     chatbot_btn_registro: "Register",
+    chatbot_btn_volver_menu: "Back to menu",
+    chatbot_pregunta_invalida: "Please select a number from 1 to 10 so I can help you. 😊",
+    chatbot_presupuesto_placeholder: "Enter your budget (e.g.: 100000)",
+    chatbot_presupuesto_btn: "Check tours",
+    chatbot_fecha_btn: "Check availability",
     chatbot_como_reservar_info: "You can make your reservation from the Reservations section of EmiTours. There you can select the place, date, time, number of people, and payment method.",
     chatbot_access_required: "Access Required",
 

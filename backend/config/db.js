@@ -1,5 +1,6 @@
 const mysql = require('mysql2');
 require('dotenv').config();
+const { migrateAdminPasswords } = require('../migrations/migrateAdminPasswords');
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -122,6 +123,9 @@ pool.getConnection((err, connection) => {
   });
 
   connection.release();
+
+  // Asegurar migración de contraseñas de administradores a hash seguro bcrypt
+  migrateAdminPasswords(pool);
 });
 
 module.exports = pool;
