@@ -113,7 +113,25 @@ base de datos.
                      MySQL
                     Base de datos
 
+Tecnologías utilizadas
 
+React y Vite: permiten construir y ejecutar la interfaz de usuario.
+
+Node.js y Express: gestionan las solicitudes y la lógica del servidor.
+
+MySQL: almacena la información del sistema, incluidos los datos necesarios para gestionar las reservas.
+
+Flujo de funcionamiento
+
+El usuario interactúa con la página web.
+
+El frontend envía una petición HTTP al backend.
+
+El backend consulta o modifica la información en MySQL.
+
+El backend devuelve una respuesta al frontend.
+
+El usuario visualiza el resultado en la interfaz.
 
 Ejecutar el frontend = npm run dev      
 Ejecutar el backend = node index.js      
