@@ -113,6 +113,8 @@ base de datos.
                      MySQL
                     Base de datos
 
+
+
 Ejecutar el frontend = npm run dev      
 Ejecutar el backend = node index.js      
 
