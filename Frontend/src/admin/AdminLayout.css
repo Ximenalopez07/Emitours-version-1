@@ -445,13 +445,30 @@
 }
 
 /* ================= RESPONSIVE ================= */
+.admin-sidebar-backdrop {
+  display: none;
+}
+
 @media (max-width: 850px) {
   .admin-sidebar {
     transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
   }
   .sidebar-collapsed .admin-sidebar {
     transform: translateX(0);
     width: var(--sidebar-width);
+  }
+  .admin-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(3px);
+    z-index: 95;
+    animation: fadeInModal 0.2s ease;
   }
   .admin-main-wrapper {
     margin-left: 0 !important;
@@ -468,6 +485,73 @@
   }
   .admin-content-area {
     padding: 20px 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-navbar {
+    height: 64px;
+    padding: 0 14px;
+    gap: 8px;
+  }
+  .navbar-left {
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+  .admin-search-form {
+    width: 100%;
+    max-width: 180px;
+    min-width: 0;
+  }
+  .admin-search-form input {
+    padding: 8px 12px 8px 34px;
+    font-size: 12.5px;
+  }
+  .admin-search-form .search-icon {
+    left: 10px;
+    font-size: 13px;
+  }
+  .user-role {
+    display: none;
+  }
+  .user-name {
+    font-size: 12px;
+    max-width: 90px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  .admin-user-profile {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .admin-content-area {
+    padding: 16px 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-navbar {
+    padding: 0 10px;
+  }
+  .admin-search-form {
+    max-width: 130px;
+  }
+  .user-name {
+    display: none;
+  }
+  .admin-user-profile {
+    padding: 2px;
+    background: none;
+    border: none;
+  }
+  .admin-modal-card {
+    padding: 18px 12px;
   }
 }
 

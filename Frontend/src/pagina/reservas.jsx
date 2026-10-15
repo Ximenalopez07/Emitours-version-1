@@ -482,7 +482,7 @@ const Reservas = () => {
               <label style={{ fontWeight: '700', color: '#0f172a', marginTop: '10px', display: 'block' }}>
                 {language === 'en' ? 'Payment Option *' : 'Opción de Pago *'}
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+              <div className="booking-payment-options-grid">
                 <button
                   type="button"
                   onClick={() => setTipoPago("total")}

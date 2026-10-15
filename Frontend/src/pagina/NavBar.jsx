@@ -18,13 +18,25 @@ function NavBar() {
     || (user?.foto && typeof user.foto === "string" && user.foto.trim())
     || DEFAULT_AVATAR;
 
+  const closeNavMenu = () => {
+    const navCollapse = document.getElementById("navbarNav");
+    if (navCollapse && navCollapse.classList.contains("show")) {
+      if (window.bootstrap?.Collapse) {
+        const bsCollapse = window.bootstrap.Collapse.getInstance(navCollapse) || new window.bootstrap.Collapse(navCollapse, { toggle: false });
+        bsCollapse.hide();
+      } else {
+        navCollapse.classList.remove("show");
+      }
+    }
+  };
+
   return (
     <>
       <nav className="navbar navbar-expand-lg custom-navbar fixed-top">
         <div className="container">
           
           {/* LOGO + TEXTO */}
-          <Link className="navbar-brand brand-title d-flex align-items-center" to="/">
+          <Link className="navbar-brand brand-title d-flex align-items-center" to="/" onClick={closeNavMenu}>
             <img 
               src={logo} 
               alt="Logo Ruta Tours" 
@@ -38,6 +50,9 @@ function NavBar() {
             type="button"
             data-bs-toggle="collapse"
             data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
           >
             <span className="navbar-toggler-icon"></span>
           </button>
@@ -46,23 +61,23 @@ function NavBar() {
             <ul className="navbar-nav ms-auto align-items-center">
 
               <li className="nav-item">
-                <Link className="nav-link nav-item-link" to="/">{t.inicio}</Link>
+                <Link className="nav-link nav-item-link" to="/" onClick={closeNavMenu}>{t.inicio}</Link>
               </li>
 
               <li className="nav-item">
-                <Link className="nav-link nav-item-link" to="/lugares">{t.lugares}</Link>
+                <Link className="nav-link nav-item-link" to="/lugares" onClick={closeNavMenu}>{t.lugares}</Link>
               </li>
 
               <li className="nav-item">
-                <Link className="nav-link nav-item-link" to="/guias">{t.guias || "Guías"}</Link>
+                <Link className="nav-link nav-item-link" to="/guias" onClick={closeNavMenu}>{t.guias || "Guías"}</Link>
               </li>
 
               <li className="nav-item">
-                <Link className="nav-link nav-item-link" to="/reservas">{t.reservas}</Link>
+                <Link className="nav-link nav-item-link" to="/reservas" onClick={closeNavMenu}>{t.reservas}</Link>
               </li>
 
               <li className="nav-item">
-                <Link className="nav-link nav-item-link" to="/contacto">{t.contacto}</Link>
+                <Link className="nav-link nav-item-link" to="/contacto" onClick={closeNavMenu}>{t.contacto}</Link>
               </li>
 
               {user ? (
@@ -94,7 +109,8 @@ function NavBar() {
               ) : (
                 <li className="nav-item">
                   <Link className="btn btn-light login-btn ms-lg-3 mt-2 mt-lg-0"
-                        to="/inicioseccion">
+                        to="/inicioseccion"
+                        onClick={closeNavMenu}>
                     {t.iniciar_sesion}
                   </Link>
                 </li>

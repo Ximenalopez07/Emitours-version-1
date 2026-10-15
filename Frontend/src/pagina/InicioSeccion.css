@@ -398,8 +398,12 @@
 
 /* Responsive */
 @media (max-width: 480px) {
+  .auth-clean-container {
+    padding: 85px 12px 35px 12px;
+  }
+
   .auth-clean-card {
-    padding: 28px 20px;
+    padding: 26px 18px;
     border-radius: 16px;
   }
 
@@ -408,11 +412,37 @@
   }
 
   .auth-sub-title {
-    font-size: 13.5px;
+    font-size: 13px;
   }
 
   .google-gis-container {
     width: 100%;
     overflow: hidden;
+  }
+}
+
+@media (max-width: 360px) {
+  .auth-clean-container {
+    padding: 75px 8px 25px 8px;
+  }
+
+  .auth-clean-card {
+    padding: 22px 14px;
+    border-radius: 14px;
+  }
+
+  .auth-clean-logo {
+    width: 68px;
+    height: 68px;
+  }
+
+  .auth-main-title {
+    font-size: 18px;
+  }
+
+  .auth-input,
+  .auth-select {
+    font-size: 13.5px;
+    padding: 9px 12px;
   }
 }

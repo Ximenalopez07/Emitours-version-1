@@ -71,7 +71,7 @@
 /* ================= 6 STATS CARDS ================= */
 .stats-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 20px;
 }
 
@@ -281,3 +281,51 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .dashboard-topbar {
+    padding: 16px 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .btn-refresh-dashboard {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stats-cards-grid {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-topbar {
+    padding: 14px 14px;
+  }
+
+  .dashboard-main-heading {
+    font-size: 20px;
+  }
+
+  .stat-card {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .stat-card-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+
+  .stat-card-number {
+    font-size: 22px;
+  }
+
+  .chart-panel-card {
+    padding: 16px 12px;
+  }
+}
+

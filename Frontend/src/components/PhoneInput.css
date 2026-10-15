@@ -112,3 +112,20 @@
     font-size: 14px !important;
   }
 }
+
+@media (max-width: 360px) {
+  .country-select-wrapper {
+    max-width: 105px;
+    padding: 0 4px;
+  }
+  .country-select {
+    font-size: 12px;
+  }
+  .dial-code-prefix {
+    font-size: 13px;
+  }
+  .phone-field {
+    font-size: 13px !important;
+  }
+}
+

@@ -570,13 +570,105 @@
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236d28d9'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
 }
 
-.table-btn-action.delete {
-  background-color: #fef2f2;
-  color: #ef4444;
-  border-color: #fecaca;
+/* ================= RESERVA DETAIL GRID ================= */
+.admin-reserva-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.table-btn-action.delete:hover {
-  background-color: #ef4444;
-  color: #ffffff;
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .page-title-bar {
+    padding: 16px 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .header-action-buttons {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .btn-export-file {
+    flex: 1;
+    justify-content: center;
+    min-width: 120px;
+  }
+
+  .table-filter-bar {
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filter-search-box {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .filter-count-badge {
+    align-self: flex-start;
+  }
+
+  .detail-grid-data {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .admin-reserva-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .form-group-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title-bar {
+    padding: 14px 12px;
+  }
+
+  .page-heading {
+    font-size: 19px;
+  }
+
+  .header-action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-export-file {
+    width: 100%;
+  }
+
+  .modal-actions-end {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-actions-end button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .detail-modal-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .confirm-actions-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .confirm-actions-row button {
+    width: 100%;
+  }
 }

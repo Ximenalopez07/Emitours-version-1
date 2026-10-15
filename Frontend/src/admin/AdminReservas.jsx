@@ -729,7 +729,7 @@ export default function AdminReservas() {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '20px' }}>
+            <div className="admin-reserva-detail-grid">
               {/* Información del Cliente */}
               <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <strong style={{ display: 'block', fontSize: '12px', color: '#0284c7', textTransform: 'uppercase', marginBottom: '8px' }}>

@@ -104,6 +104,11 @@ export default function AdminLayout() {
                 to={item.path}
                 className={`menu-item ${active ? 'active' : ''}`}
                 title={collapsed ? item.label : ''}
+                onClick={() => {
+                  if (window.innerWidth <= 850) {
+                    setCollapsed(false);
+                  }
+                }}
               >
                 <span className="menu-icon">{item.icon}</span>
                 {!collapsed && <span className="menu-label">{item.label}</span>}
@@ -123,6 +128,15 @@ export default function AdminLayout() {
           </button>
         </div>
       </aside>
+
+      {/* OVERLAY PARA MÓVIL SI SIDEBAR ESTÁ ABIERTO */}
+      {collapsed && (
+        <div
+          className="admin-sidebar-backdrop"
+          onClick={() => setCollapsed(false)}
+          aria-hidden="true"
+        />
+      )}
 
       {/* ÁREA PRINCIPAL */}
       <div className="admin-main-wrapper">

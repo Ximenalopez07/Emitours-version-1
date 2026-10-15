@@ -316,8 +316,61 @@
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
+  .contacto-container {
+    padding-top: 105px;
+  }
+
   .contacto-main {
     flex-direction: column;
     align-items: center;
+    gap: 28px;
+    padding: 10px 14px 50px 14px;
+  }
+
+  .contacto-title-header h1 {
+    font-size: clamp(1.8rem, 5vw, 2.3rem);
+  }
+
+  .chatbot-embedded-card,
+  .contacto-info-card {
+    width: 100%;
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contacto-container {
+    padding-top: 95px;
+  }
+
+  .contacto-info-card {
+    padding: 24px 16px;
+    border-radius: 18px;
+  }
+
+  .info-logo {
+    width: 120px;
+  }
+
+  .chatbot-embedded-card {
+    height: clamp(460px, 72vh, 540px);
+    border-radius: 18px;
+  }
+
+  .chatbot-embedded-header {
+    padding: 14px 16px;
+  }
+
+  .chatbot-embedded-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .chatbot-embedded-messages {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .embedded-bubble-wrapper {
+    max-width: 90%;
   }
 }

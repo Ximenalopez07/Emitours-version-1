@@ -809,7 +809,7 @@
   }
 
   .hero-main-title {
-    font-size: 32px;
+    font-size: clamp(26px, 6vw, 36px);
   }
 
   .hero-main-subtitle {
@@ -864,7 +864,6 @@
     margin-bottom: 4px;
   }
 
-  /* Quitar triángulo lateral y ponerlo apuntando hacia arriba/abajo en móvil */
   .chatbot-speech-bubble::after {
     display: none;
   }
@@ -919,7 +918,7 @@
   }
 
   .destacados-section-title {
-    font-size: 30px;
+    font-size: clamp(24px, 5.5vw, 30px);
   }
 
   .destacados-section-subtitle {
@@ -927,7 +926,8 @@
   }
 
   .place-carousel-card {
-    height: 380px;
+    height: clamp(380px, 68vh, 460px);
+    min-height: 380px;
     border-radius: 20px;
   }
 
@@ -936,7 +936,7 @@
   }
 
   .carousel-place-title {
-    font-size: 24px;
+    font-size: clamp(20px, 5vw, 24px);
   }
 
   .carousel-place-desc {
@@ -954,15 +954,117 @@
   }
 
   .prev-arrow {
-    left: 12px;
+    left: 10px;
   }
 
   .next-arrow {
-    right: 12px;
+    right: 10px;
   }
 
   .carousel-explore-link {
     font-size: 12px;
     padding: 6px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-section-modern {
+    padding: 100px 14px 50px 14px;
+  }
+
+  .hero-main-title {
+    font-size: clamp(24px, 7vw, 30px);
+    letter-spacing: -0.3px;
+  }
+
+  .hero-welcome-badge {
+    font-size: 11px;
+    padding: 5px 14px;
+    letter-spacing: 1.2px;
+  }
+
+  .hero-main-subtitle {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .hero-primary-btn {
+    font-size: 14.5px;
+    padding: 12px 22px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .chatbot-banner-inner {
+    padding: 20px 14px;
+  }
+
+  .chatbot-banner-title {
+    font-size: 20px;
+  }
+
+  .chatbot-robot-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .chatbot-speech-bubble {
+    font-size: 13px;
+    padding: 10px 14px;
+  }
+
+  .quienes-somos-card {
+    padding: 24px 14px;
+  }
+
+  .quienes-somos-heading {
+    font-size: 24px;
+  }
+
+  .quienes-somos-paragraph {
+    font-size: 14.5px;
+  }
+
+  .place-carousel-card {
+    height: clamp(370px, 65vh, 420px);
+    min-height: 360px;
+    border-radius: 16px;
+  }
+
+  .carousel-bottom-content {
+    padding: 16px 14px;
+  }
+
+  .carousel-arrow {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+  }
+
+  .prev-arrow {
+    left: 6px;
+  }
+
+  .next-arrow {
+    right: 6px;
+  }
+
+  .carousel-place-desc {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 360px) {
+  .hero-main-title {
+    font-size: 22px;
+  }
+
+  .destacados-section-title {
+    font-size: 22px;
+  }
+
+  .carousel-place-title {
+    font-size: 19px;
   }
 }

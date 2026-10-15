@@ -1,11 +1,13 @@
 .footer {
   width: 100%;
-  background-color: #000000; /* ⬅ TOTALMENTE NEGRO */
+  max-width: 100%;
+  background-color: #000000; /* TOTALMENTE NEGRO */
   color: white;
   padding: 25px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-sizing: border-box;
 }
 
 .footer-left,
@@ -18,25 +20,75 @@
 .social-icon {
   width: 35px;
   height: 35px;
-  
+  object-fit: cover;
+  border-radius: 6px;
 }
 
 .pse-logo {
   width: 70px;
+  height: auto;
+  object-fit: contain;
 }
 
 .footer-center {
   text-align: center;
+  max-width: 800px;
+  padding: 0 16px;
 }
 
 .email {
   font-size: 17px;
   margin: 0;
   font-weight: 600;
+  word-break: break-all;
 }
 
 .politicas {
-  margin-top: 4px;
-  font-size: 14px;
-  opacity: 0.8;
+  margin-top: 6px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  opacity: 0.82;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 850px) {
+  .footer {
+    flex-direction: column;
+    padding: 28px 18px;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .footer-left,
+  .footer-right {
+    justify-content: center;
+  }
+
+  .footer-center {
+    padding: 0 4px;
+  }
+
+  .email {
+    font-size: 15px;
+  }
+
+  .politicas {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer {
+    padding: 22px 14px;
+    gap: 16px;
+  }
+
+  .social-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .pse-logo {
+    width: 60px;
+  }
 }

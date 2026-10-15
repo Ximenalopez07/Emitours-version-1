@@ -394,3 +394,52 @@ input:checked + .slider:before {
   border-color: #dc3545;
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
 }
+
+/* RESPONSIVE MÓVIL */
+@media (max-width: 480px) {
+  .profile-drawer {
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .drawer-header {
+    padding: 16px 20px;
+  }
+
+  .drawer-content {
+    padding: 16px;
+  }
+
+  .drawer-section {
+    padding: 16px 14px;
+    margin-bottom: 16px;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .drawer-header {
+    padding: 14px;
+  }
+
+  .drawer-header h2 {
+    font-size: 19px;
+  }
+
+  .drawer-content {
+    padding: 12px;
+  }
+
+  .drawer-section {
+    padding: 14px 10px;
+  }
+
+  .user-avatar {
+    width: 80px;
+    height: 80px;
+  }
+}

@@ -71,12 +71,12 @@ export default function AdminReportes() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginTop: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '20px', marginTop: '20px' }}>
         {reportes.map((r) => (
           <div key={r} className="chart-box" style={{ background: 'rgba(30,41,59,0.5)', padding: '24px', borderRadius: '16px' }}>
             <h3 style={{ marginTop: 0 }}>Reporte de {r}</h3>
             <p style={{ color: '#94a3b8', fontSize: '13px' }}>Descarga la información completa del módulo de {r}.</p>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
               <button className="btn-export pdf" onClick={() => downloadReport(r.split(' ')[0], 'pdf')}><FaFilePdf /> PDF</button>
               <button className="btn-export excel" onClick={() => downloadReport(r.split(' ')[0], 'excel')}><FaFileExcel /> Excel</button>
               <button className="btn-cancel" onClick={() => downloadReport(r.split(' ')[0], 'csv')}><FaFileCsv /> CSV</button>
