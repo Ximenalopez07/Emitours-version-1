@@ -139,3 +139,5 @@ Ejecutar el backend = node index.js
 Desarrolladoras:
 Helen Henao 
 Yulisa Henao
+
+Proyecto EmiTours: configuración de despliegue.
