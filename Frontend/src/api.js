@@ -89,4 +89,10 @@ export const updateAdminConfiguracion = (data) => api.put('/admin/configuracion'
 
 export const getAdminNotificaciones = () => api.get('/admin/notificaciones');
 
+// ================= MERCADO PAGO CHECKOUT PRO =================
+export const crearPreferenciaMP = (data) => api.post('/mercadopago/crear-preferencia', data);
+export const verificarPagoMP = (paymentId) => api.get(`/mercadopago/verificar/${paymentId}`);
+export const getUltimoPagoMP = () => api.get('/mercadopago/ultimo-pago');
+export const getConfigPublicaMP = () => api.get('/mercadopago/config');
+
 export default api;

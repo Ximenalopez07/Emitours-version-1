@@ -25,15 +25,16 @@ function formatTimeToSql(hStr) {
   return '07:00:00';
 }
 
-// Normalizar método de pago al enum ('nequi', 'pse', 'efectivo', 'datafono')
+// Normalizar método de pago al enum ('nequi', 'pse', 'efectivo', 'datafono', 'mercadopago')
 function normalizeMetodoPago(mp) {
-  if (!mp) return 'nequi';
+  if (!mp) return 'mercadopago';
   const val = String(mp).toLowerCase();
+  if (val.includes('mercado') || val.includes('mp')) return 'mercadopago';
   if (val.includes('nequi')) return 'nequi';
   if (val.includes('pse')) return 'pse';
   if (val.includes('efectivo')) return 'efectivo';
   if (val.includes('dataf') || val.includes('datáf')) return 'datafono';
-  return 'nequi';
+  return 'mercadopago';
 }
 
 // Normalizar estado al enum ('pendiente', 'confirmada', 'cancelada', 'realizada')
@@ -75,6 +76,8 @@ exports.getAll = (req, res) => {
       r.estado_pago,
       r.estado,
       r.codigo,
+      r.mp_payment_id,
+      r.monto_pagado,
       r.fecha_creacion,
       u.nombre_usuario,
       u.correo_electronico,
@@ -103,8 +106,21 @@ exports.getAll = (req, res) => {
 // ==========================================
 // CREAR RESERVA CON INSERT ESPECIFICANDO COLUMNAS
 // ==========================================
-exports.create = (req, res) => {
-  const { usuario_id, lugar_id, fecha, hora, numero_personas, idioma, idioma_tour, metodo_pago, opcion_pago, precio_total } = req.body;
+exports.create = async (req, res) => {
+  const {
+    usuario_id,
+    lugar_id,
+    fecha,
+    hora,
+    numero_personas,
+    idioma,
+    idioma_tour,
+    metodo_pago,
+    opcion_pago,
+    precio_total,
+    mp_payment_id,
+    monto_abonado
+  } = req.body;
   const idiomaRaw = idioma || idioma_tour;
 
   const uId = usuario_id || req.body.id_usuario || req.body.userId || req.user?.id || req.user?.id_registro;
@@ -140,7 +156,7 @@ exports.create = (req, res) => {
     WHERE lugar_id = ? AND fecha = ? AND (estado != 'cancelada')
   `;
 
-  db.query(sqlCount, [lId, fechaStr], (errCount, resCount) => {
+  db.query(sqlCount, [lId, fechaStr], async (errCount, resCount) => {
     if (errCount) return res.status(500).json({ status: 'ERROR', mensaje: errCount.sqlMessage || errCount.message });
 
     const totalReservas = resCount[0]?.total_reservas || 0;
@@ -152,7 +168,7 @@ exports.create = (req, res) => {
     }
 
     // 6. Obtener precio del lugar
-    db.query("SELECT * FROM lugares WHERE id = ?", [lId], (errLugar, resLugar) => {
+    db.query("SELECT * FROM lugares WHERE id = ?", [lId], async (errLugar, resLugar) => {
       if (errLugar || resLugar.length === 0) {
         return res.status(404).json({ status: 'ERROR', mensaje: 'Lugar turístico no encontrado.' });
       }
@@ -166,10 +182,89 @@ exports.create = (req, res) => {
 
       // Determinar estado de pago según la opción seleccionada (Pagar el total o Pagar el 50%)
       const opcClean = String(opcion_pago || '').toLowerCase();
-      const estadoPagoEnum = (opcClean.includes('total') || opcClean.includes('100')) ? 'pagado' : 'parcial';
-      const estadoEnum = 'pendiente';
+      const esPagoTotal = (opcClean.includes('total') || opcClean.includes('100'));
+      let estadoPagoEnum = esPagoTotal ? 'pagado' : 'parcial';
+      const montoCalculado = esPagoTotal ? precioTotal : Math.round(precioTotal * 0.5);
+      const saldoPendienteCalculado = esPagoTotal ? 0 : (precioTotal - montoCalculado);
 
-      // 7. INSERT ESPECIFICANDO EXACTAMENTE LOS NOMBRES DE LAS COLUMNAS
+      let estadoEnum = 'pendiente';
+      let mpPaymentIdFinal = mp_payment_id ? String(mp_payment_id).trim() : null;
+      let montoPagadoFinal = monto_abonado ? parseFloat(monto_abonado) : montoCalculado;
+
+      // 7. VERIFICACIÓN CRÍTICA DE SEGURIDAD CON MERCADO PAGO SI SE ENVÍA mp_payment_id
+      if (mpPaymentIdFinal) {
+        try {
+          // A. Verificar si esta transacción ya fue registrada para prevenir duplicados (idempotencia)
+          const [resRepetido] = await db.promise().query(
+            "SELECT id, codigo, estado, estado_pago, precio_total, monto_pagado FROM reservas WHERE mp_payment_id = ?",
+            [mpPaymentIdFinal]
+          );
+          if (resRepetido && resRepetido.length > 0) {
+            const existente = resRepetido[0];
+            const saldoCalc = Math.max(0, (existente.precio_total || 0) - (existente.monto_pagado || 0));
+            console.log(`[Reserva Controller] ℹ️ Transacción MP #${mpPaymentIdFinal} ya asociada a la reserva ${existente.codigo}. Retornando reserva existente.`);
+            return res.json({
+              status: 'OK',
+              mensaje: `Esta reserva ya se encuentra registrada con el comprobante #${mpPaymentIdFinal}.`,
+              codigo: existente.codigo,
+              reservaId: existente.id,
+              estado: existente.estado,
+              estado_pago: existente.estado_pago,
+              monto_pagado: existente.monto_pagado,
+              saldo_pendiente: saldoCalc,
+              ya_existia: true
+            });
+          }
+
+          // B. Verificar con el SDK oficial de Mercado Pago
+          const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+          if (token) {
+            const { MercadoPagoConfig, Payment } = require('mercadopago');
+            const client = new MercadoPagoConfig({ accessToken: token });
+            const payment = new Payment(client);
+            const paymentData = await payment.get({ id: mpPaymentIdFinal });
+
+            if (!paymentData) {
+              return res.status(400).json({
+                status: 'ERROR',
+                mensaje: 'No se encontró la transacción en Mercado Pago.'
+              });
+            }
+
+            if (paymentData.status === 'rejected' || paymentData.status === 'cancelled') {
+              return res.status(400).json({
+                status: 'ERROR',
+                mensaje: `El pago fue rechazado en Mercado Pago (Detalle: ${paymentData.status_detail || 'No autorizado'}). No es posible confirmar la reserva.`
+              });
+            }
+
+            if (paymentData.status === 'approved') {
+              // Pago aprobado inmediatamente (Tarjeta, PSE acreditado)
+              montoPagadoFinal = parseFloat(paymentData.transaction_amount || montoCalculado);
+              estadoEnum = 'confirmada';
+              estadoPagoEnum = esPagoTotal ? 'pagado' : 'parcial';
+            } else if (paymentData.status === 'pending' || paymentData.status === 'in_process' || paymentData.status === 'authorized') {
+              // Pago pendiente de acreditación (Bancolombia transferencia, Efecty ticket, PSE pendiente)
+              montoPagadoFinal = 0; // Aún no acreditado físicamente
+              estadoEnum = 'pendiente';
+              estadoPagoEnum = 'pendiente';
+            } else {
+              return res.status(400).json({
+                status: 'ERROR',
+                mensaje: `El estado del pago (${paymentData.status}) no permite registrar la reserva.`
+              });
+            }
+          }
+        } catch (errMP) {
+          console.error('[Reserva Controller] Error al verificar transacción MP:', errMP.message);
+          return res.status(400).json({
+            status: 'ERROR',
+            mensaje: 'No fue posible validar la transacción con Mercado Pago: ' + errMP.message
+          });
+        }
+      }
+
+      // 8. INSERT ESPECIFICANDO EXACTAMENTE LOS NOMBRES DE LAS COLUMNAS
       const sqlInsert = `
         INSERT INTO reservas (
           usuario_id,
@@ -182,9 +277,11 @@ exports.create = (req, res) => {
           metodo_pago,
           estado_pago,
           estado,
-          codigo
+          codigo,
+          mp_payment_id,
+          monto_pagado
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       db.query(sqlInsert, [
@@ -198,7 +295,9 @@ exports.create = (req, res) => {
         metodoPagoEnum,
         estadoPagoEnum,
         estadoEnum,
-        codigo
+        codigo,
+        mpPaymentIdFinal,
+        montoPagadoFinal
       ], (errInsert, resInsert) => {
         if (errInsert) return res.status(500).json({ status: 'ERROR', mensaje: errInsert.sqlMessage || errInsert.message });
 
@@ -223,14 +322,14 @@ exports.create = (req, res) => {
             precioTotal,
             metodoPago: metodoPagoEnum.toUpperCase(),
             estadoReserva: estadoEnum,
-            estadoPago: estadoPagoEnum === 'pagado' ? 'Pagado (100%)' : 'Parcial (50% abonado)'
+            estadoPago: estadoPagoEnum === 'pagado' ? 'Pagado (100%)' : `Parcial (50% abonado: $${montoPagadoFinal.toLocaleString()} COP, Saldo: $${saldoPendienteCalculado.toLocaleString()} COP)`
           }).catch(errMail => {
             console.error(`[Reserva Controller] ❌ Error no bloqueante al enviar correo de reserva ${codigo}:`, errMail.message);
           });
 
           // Notificación interna
           db.query("INSERT INTO notificaciones (tipo, mensaje) VALUES ('Reserva', ?)", [
-            `Nueva reserva ${codigo} recibida para ${lugar.nombre} (${cantidadPersonas} pers, Idioma: ${idiomaClean === 'en' ? 'Inglés' : 'Español'}).`
+            `Nueva reserva ${codigo} confirmada para ${lugar.nombre} (${cantidadPersonas} pers, Pago MP: ${mpPaymentIdFinal || 'Directo'}).`
           ], () => {});
 
           // Responder al cliente confirmando que la reserva se guardó en MySQL
@@ -239,6 +338,10 @@ exports.create = (req, res) => {
             mensaje: '✅ Reserva registrada exitosamente.',
             codigo,
             reservaId: resInsert.insertId,
+            estado: estadoEnum,
+            estado_pago: estadoPagoEnum,
+            monto_pagado: montoPagadoFinal,
+            saldo_pendiente: saldoPendienteCalculado,
             reservasRestantesFecha: 20 - (totalReservas + 1)
           });
         });

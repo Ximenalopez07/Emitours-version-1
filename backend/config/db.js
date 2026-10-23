@@ -33,6 +33,29 @@ pool.getConnection((err, connection) => {
     if (!errMod) console.log("Columna 'estado_pago' verificada.");
   });
 
+  // Asegurar que metodo_pago soporte 'mercadopago'
+  connection.query("ALTER TABLE reservas MODIFY COLUMN metodo_pago ENUM('nequi','pse','efectivo','datafono','mercadopago') NOT NULL DEFAULT 'nequi'", (errMod) => {
+    if (!errMod) console.log("Columna 'metodo_pago' verificada con soporte para mercadopago.");
+  });
+
+  // Asegurar columna mp_payment_id en reservas
+  connection.query("SHOW COLUMNS FROM reservas LIKE 'mp_payment_id'", (errCol, resCol) => {
+    if (!errCol && (!resCol || resCol.length === 0)) {
+      connection.query("ALTER TABLE reservas ADD COLUMN mp_payment_id VARCHAR(100) NULL UNIQUE", (errAdd) => {
+        if (!errAdd) console.log("Columna 'mp_payment_id' añadida a reservas.");
+      });
+    }
+  });
+
+  // Asegurar columna monto_pagado en reservas
+  connection.query("SHOW COLUMNS FROM reservas LIKE 'monto_pagado'", (errCol, resCol) => {
+    if (!errCol && (!resCol || resCol.length === 0)) {
+      connection.query("ALTER TABLE reservas ADD COLUMN monto_pagado DECIMAL(10,2) NOT NULL DEFAULT 0.00", (errAdd) => {
+        if (!errAdd) console.log("Columna 'monto_pagado' añadida a reservas.");
+      });
+    }
+  });
+
   // Asegurar columnas requeridas en registro_usuarios
   const columnsToCheck = [
     { name: 'pais', def: "VARCHAR(100) NOT NULL DEFAULT 'Colombia'" },

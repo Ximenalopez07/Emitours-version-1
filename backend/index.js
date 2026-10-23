@@ -17,6 +17,7 @@ const guiasRoutes = require('./routes/guias.routes');
 const adminRoutes = require('./routes/admin.routes');
 const contactoRoutes = require('./routes/contacto.routes');
 const chatbotRoutes = require('./routes/chatbot.routes');
+const mercadopagoRoutes = require('./routes/mercadopago.routes');
 
 // ================= USAR RUTAS =================
 
@@ -27,6 +28,8 @@ app.use('/guias', guiasRoutes);
 app.use('/admin', adminRoutes);
 app.use('/contacto', contactoRoutes);
 app.use('/chatbot', chatbotRoutes);
+app.use('/mercadopago', mercadopagoRoutes);
+app.use('/api/mercadopago', mercadopagoRoutes);
 
 // ================= RUTA BASE =================
 

@@ -330,8 +330,10 @@ exports.getPagosAdmin = (req, res) => {
       r.usuario_id,
       r.fecha,
       r.precio_total as monto,
+      r.monto_pagado as monto_abonado,
       r.metodo_pago,
       r.estado_pago as estado,
+      r.mp_payment_id,
       u.nombre_usuario,
       r.codigo as reserva_codigo
     FROM reservas r

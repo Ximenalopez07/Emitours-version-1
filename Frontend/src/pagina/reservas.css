@@ -364,6 +364,31 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+/* CAMPO FECHA DEL TOUR - VISIBILIDAD DEL ICONO DEL CALENDARIO */
+.form-reserva-redisenado input[type="date"] {
+  color-scheme: light;
+  color: #0f172a;
+}
+
+.form-reserva-redisenado input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: brightness(0);
+  opacity: 0.8;
+  font-size: 1.15rem;
+  padding: 2px;
+  border-radius: 4px;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.form-reserva-redisenado input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.form-reserva-redisenado input[type="date"]::-webkit-datetime-edit {
+  color: #1e293b;
+}
+
 .help-text {
   font-size: 0.75rem;
   color: #64748b;
@@ -771,3 +796,124 @@
   gap: 10px;
   margin-bottom: 14px;
 }
+
+/* ========================================================
+   ESTILOS MERCADO PAGO CHECKOUT PRO
+   ======================================================== */
+.mp-checkout-section {
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-pagar-mp {
+  width: 100%;
+  background: linear-gradient(135deg, #009ee3 0%, #007eb5 100%);
+  color: #ffffff;
+  border: none;
+  padding: 13px 18px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 158, 227, 0.35);
+  transition: all 0.25s ease;
+}
+
+.btn-pagar-mp:hover:not(:disabled) {
+  background: linear-gradient(135deg, #008cc9 0%, #006a99 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 158, 227, 0.45);
+}
+
+.btn-pagar-mp:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.card-estado-mp {
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 5px solid;
+}
+
+.card-estado-mp.aprobado {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.card-estado-mp.pendiente {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.card-estado-mp.rechazado {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.card-estado-mp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.card-estado-mp-detalles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.btn-reintentar-mp {
+  margin-top: 8px;
+  background: #ffffff;
+  border: 1px solid currentColor;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.15s;
+}
+
+.btn-reintentar-mp:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.btn-confirmar-modal:disabled {
+  background: #cbd5e1 !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.aviso-pago-bloqueado {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+

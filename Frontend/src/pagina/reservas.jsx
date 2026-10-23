@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useContext } from "react";
 import { UIContext } from "../context/UIContext";
-import { getLugares, getReservas, createReserva } from "../api";
+import { getLugares, getReservas, createReserva, crearPreferenciaMP, verificarPagoMP, getUltimoPagoMP } from "../api";
 import { translations } from "../utils/translations";
 import "./reservas.css";
 
-// MÉTODOS DE PAGO PERMITIDOS (ÚNICAMENTE 4)
-const METODOS_PAGO_PERMITIDOS = ['Nequi', 'PSE', 'Pago en efectivo', 'Datáfono'];
+// MÉTODOS DE PAGO PERMITIDOS (ÚNICAMENTE NEQUI Y PSE)
+const METODOS_PAGO_PERMITIDOS = ['Nequi', 'PSE'];
 
 // LISTADO DE HORARIOS EN INTERVALOS DE 30 MINUTOS (07:00 AM - 07:00 PM)
 const HORARIOS_DISPONIBLES = [
@@ -148,6 +148,14 @@ const Reservas = () => {
   const [mensajeExito, setMensajeExito] = useState(null);
   const [errorForm, setErrorForm] = useState(null);
 
+  // ESTADOS MERCADO PAGO CHECKOUT PRO
+  const [pagoVerificado, setPagoVerificado] = useState(null); // { paymentId, aprobado, pendiente, rechazado, monto, ya_utilizado, detalle }
+  const [cargandoMP, setCargandoMP] = useState(false);
+  const [verificandoMP, setVerificandoMP] = useState(false);
+  const [inputPaymentIdManual, setInputPaymentIdManual] = useState("");
+  const [borradorPendiente, setBorradorPendiente] = useState(null);
+  const [guardandoReserva, setGuardandoReserva] = useState(false);
+
   useEffect(() => {
     if (!user) {
       setMisReservas([]);
@@ -155,7 +163,131 @@ const Reservas = () => {
       setCelular("");
     }
     cargarDatos();
+
+    // Capturar retorno automático de Mercado Pago desde la URL
+    const queryParams = new URLSearchParams(window.location.search);
+    const paymentIdUrl = queryParams.get("payment_id") || queryParams.get("collection_id");
+    const statusUrl = queryParams.get("status") || queryParams.get("collection_status");
+
+    if (paymentIdUrl) {
+      verificarRetornoMercadoPago(paymentIdUrl, statusUrl);
+      // Limpiar parámetros de la URL sin recargar la página
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      // Si no hay parámetros en la URL, verificar si quedó un borrador en proceso
+      const tempJson = sessionStorage.getItem("emitours_temp_reserva");
+      if (tempJson) {
+        try {
+          const parsed = JSON.parse(tempJson);
+          setBorradorPendiente(parsed);
+        } catch (e) {}
+      }
+    }
   }, [user]);
+
+  const verificarRetornoMercadoPago = async (pId, stUrl) => {
+    setVerificandoMP(true);
+    setErrorForm(null);
+    try {
+      // 1. Restaurar datos del borrador de reserva si existen en sessionStorage
+      const tempJson = sessionStorage.getItem("emitours_temp_reserva");
+      let temp = null;
+      let tempTour = null;
+      if (tempJson) {
+        try {
+          temp = JSON.parse(tempJson);
+          if (temp.nombreCompleto) setNombreCompleto(temp.nombreCompleto);
+          if (temp.celular) setCelular(temp.celular);
+          if (temp.numeroPersonas) setNumeroPersonas(temp.numeroPersonas);
+          if (temp.fechaTour) setFechaTour(temp.fechaTour);
+          if (temp.horaTour) setHoraTour(temp.horaTour);
+          if (temp.idiomaTour) setIdiomaTour(temp.idiomaTour);
+          if (temp.tipoPago) setTipoPago(temp.tipoPago);
+          if (temp.metodoPago) setMetodoPago(temp.metodoPago);
+
+          tempTour = tours.find(t => String(t.id) === String(temp.tourId)) || {
+            id: temp.tourId,
+            nombre: temp.tourNombre || "Tour seleccionado",
+            precio: temp.precioUnitario || 100000
+          };
+          setSelectedTour(tempTour);
+        } catch (e) {
+          console.warn("No se pudo parsear el borrador de reserva", e);
+        }
+      }
+
+      // 2. Consultar directamente al backend para verificar el estado real con Mercado Pago
+      const res = await verificarPagoMP(pId);
+      if (res.data && res.data.status === "OK") {
+        const info = res.data;
+        const yaUtilizado = !!info.ya_utilizado;
+
+        // Si el borrador no estaba en sessionStorage, reconstruir los datos desde la metadata de Mercado Pago
+        if (!temp && info.metadata && Object.keys(info.metadata).length > 0) {
+          const meta = info.metadata;
+          if (meta.numero_personas) setNumeroPersonas(meta.numero_personas);
+          if (meta.fecha) setFechaTour(meta.fecha);
+          if (meta.hora) setHoraTour(meta.hora);
+          if (meta.idioma) setIdiomaTour(meta.idioma);
+          if (meta.tipo_pago) setTipoPago(meta.tipo_pago === 'total' ? 'total' : '50');
+          if (meta.metodo_pago) setMetodoPago(meta.metodo_pago);
+
+          const foundTour = tours.find(t => String(t.id) === String(meta.lugar_id));
+          if (foundTour) {
+            setSelectedTour(foundTour);
+          }
+        }
+
+        setPagoVerificado({
+          paymentId: pId,
+          aprobado: !!info.aprobado,
+          pendiente: !!info.pendiente,
+          rechazado: !!info.rechazado,
+          monto: info.monto,
+          metodo_pago: info.metodo_pago,
+          status_detail: info.status_detail,
+          ya_utilizado: yaUtilizado,
+          reserva: info.reserva
+        });
+
+        // Caso 1: La transacción ya fue utilizada previamente en una reserva
+        if (yaUtilizado) {
+          setErrorForm(
+            language === 'en'
+              ? `This payment transaction (#${pId}) is already linked to reservation ${info.reserva?.codigo || ''}. Check 'My Bookings' below.`
+              : `Esta transacción de Mercado Pago (#${pId}) ya está vinculada a la reserva ${info.reserva?.codigo || ''}. Puedes consultarla en la sección 'Mis Reservas' abajo.`
+          );
+          sessionStorage.removeItem("emitours_temp_reserva");
+          setBorradorPendiente(null);
+          return;
+        }
+
+        // Caso 2: Pago Aprobado o Pendiente de Acreditación (Bancolombia / Efecty / PSE)
+        if (info.aprobado || info.pendiente) {
+          // El pago está autenticado y verificado con Mercado Pago.
+          // El formulario conserva todos los datos y permanece ABIERTO para que el usuario pulse "Confirmar reserva".
+          setErrorForm(null);
+        }
+
+        // Caso 3: Pago Rechazado
+        if (info.rechazado) {
+          setErrorForm(
+            language === 'en'
+              ? `The payment was rejected by Mercado Pago (${info.status_detail || 'not authorized'}). The booking was not created. You can retry with another payment method.`
+              : `El pago fue rechazado por Mercado Pago (${info.status_detail || 'no autorizado'}). La reserva no fue creada. Puedes intentar con otro medio de pago.`
+          );
+        }
+      } else {
+        setErrorForm("No se pudo verificar la transacción con Mercado Pago: " + (res.data?.mensaje || ""));
+      }
+    } catch (err) {
+      console.error("Error al verificar retorno de Mercado Pago:", err);
+      const msgErr = err.response?.data?.mensaje || err.message;
+      setErrorForm("Error al verificar transacción con Mercado Pago: " + msgErr);
+    } finally {
+      setVerificandoMP(false);
+    }
+  };
 
   const cargarDatos = async () => {
     try {
@@ -196,6 +328,24 @@ const Reservas = () => {
     }
   };
 
+  const handleDetectarUltimoPago = async () => {
+    setVerificandoMP(true);
+    setErrorForm(null);
+    try {
+      const res = await getUltimoPagoMP();
+      if (res.data && res.data.paymentId) {
+        await verificarRetornoMercadoPago(res.data.paymentId, res.data.estado_mp);
+      } else {
+        setErrorForm("No se encontró ningún pago reciente en Mercado Pago Sandbox.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorForm("Error al buscar último pago: " + (err.response?.data?.mensaje || err.message));
+    } finally {
+      setVerificandoMP(false);
+    }
+  };
+
   const abrirFormularioReserva = (tour) => {
     const usuarioActual = user || (localStorage.getItem("usuario") ? JSON.parse(localStorage.getItem("usuario")) : null);
     if (!usuarioActual) {
@@ -213,6 +363,101 @@ const Reservas = () => {
     setMetodoPago("Nequi");
     setMensajeExito(null);
     setErrorForm(null);
+    setPagoVerificado(null);
+    setCargandoMP(false);
+  };
+
+  const handleIniciarPagoMercadoPago = async () => {
+    setErrorForm(null);
+
+    const usuarioActual = user || (localStorage.getItem("usuario") ? JSON.parse(localStorage.getItem("usuario")) : null);
+    const usuarioId = usuarioActual?.id_registro || usuarioActual?.id || usuarioActual?.id_usuario;
+
+    if (!usuarioId) {
+      setErrorForm(language === 'en' ? 'You must be logged in to make a payment.' : 'Debes iniciar sesión para realizar el pago.');
+      return;
+    }
+
+    if (!selectedTour) {
+      setErrorForm(language === 'en' ? 'Please select a tour.' : 'Por favor selecciona un tour.');
+      return;
+    }
+
+    if (!fechaTour) {
+      setErrorForm(language === 'en' ? 'Please select the tour date first.' : 'Por favor selecciona primero la fecha del tour.');
+      return;
+    }
+
+    const cantidadPersonas = parseInt(numeroPersonas, 10);
+    if (isNaN(cantidadPersonas) || cantidadPersonas < 1) {
+      setErrorForm(language === 'en' ? 'Please specify at least 1 person.' : 'Por favor indica al menos 1 persona.');
+      return;
+    }
+
+    setCargandoMP(true);
+
+    try {
+      const precioUnitario = typeof selectedTour.precio === 'number' ? selectedTour.precio : 100000;
+      const esPagoTotal = (tipoPago === 'total');
+
+      // Guardar el borrador en sessionStorage para restaurarlo al regresar del checkout
+      const borrador = {
+        tourId: selectedTour.id,
+        tourNombre: selectedTour.nombre || selectedTour.title,
+        precioUnitario,
+        nombreCompleto,
+        celular,
+        numeroPersonas: cantidadPersonas,
+        fechaTour,
+        horaTour: horaTour || "07:00 AM",
+        idiomaTour: idiomaTour || "es",
+        tipoPago,
+        metodoPago
+      };
+      sessionStorage.setItem("emitours_temp_reserva", JSON.stringify(borrador));
+
+      // Crear la preferencia en el backend
+      const res = await crearPreferenciaMP({
+        usuario_id: usuarioId,
+        nombre_completo: nombreCompleto,
+        celular: celular,
+        lugar_id: selectedTour.id,
+        numero_personas: cantidadPersonas,
+        fecha: fechaTour,
+        hora: horaTour || "07:00 AM",
+        idioma: idiomaTour || "es",
+        tipo_pago: tipoPago,
+        metodo_pago: metodoPago
+      });
+
+      if (res.data && res.data.status === 'OK') {
+        const urlCheckout = res.data.checkoutUrl || res.data.sandboxInitPoint || res.data.initPoint;
+        if (urlCheckout) {
+          // Redirigir al Checkout Pro oficial de Mercado Pago (Sandbox)
+          window.location.href = urlCheckout;
+        } else {
+          setErrorForm("No se recibió la URL de redirección del checkout de Mercado Pago.");
+          setCargandoMP(false);
+        }
+      } else {
+        setErrorForm(res.data?.mensaje || "Error al generar la preferencia de pago en Mercado Pago.");
+        setCargandoMP(false);
+      }
+    } catch (err) {
+      console.error("Error al iniciar checkout Mercado Pago:", err);
+      let msg = err.response?.data?.mensaje;
+      if (!msg) {
+        if (err.response?.status === 404) {
+          msg = language === 'en'
+            ? 'The payment endpoint was not found (404). Please restart the backend server so it loads the new Mercado Pago routes.'
+            : 'El servicio de pago no fue encontrado (Error 404). Por favor reinicia el servidor backend para que cargue las nuevas rutas de Mercado Pago.';
+        } else {
+          msg = err.message || "Error al conectar con Mercado Pago";
+        }
+      }
+      setErrorForm(msg);
+      setCargandoMP(false);
+    }
   };
 
   const handleSubmitReserva = async (e) => {
@@ -237,6 +482,27 @@ const Reservas = () => {
       return;
     }
 
+    // ========================================================
+    // REGLA: PAGO APROBADO O EN PROCESO (EFECTY / BANCOLOMBIA / PSE)
+    // ========================================================
+    if (!pagoVerificado || (!pagoVerificado.aprobado && !pagoVerificado.pendiente)) {
+      setErrorForm(
+        language === 'en' 
+          ? 'You must complete or initiate the payment on Mercado Pago before confirming the booking.' 
+          : 'Debes completar o iniciar el pago con Mercado Pago antes de confirmar la reserva.'
+      );
+      return;
+    }
+
+    if (pagoVerificado.ya_utilizado) {
+      setErrorForm(
+        language === 'en'
+          ? 'This Mercado Pago transaction has already been used for another booking.'
+          : 'Esta transacción de Mercado Pago ya fue utilizada para confirmar una reserva.'
+      );
+      return;
+    }
+
     const cantidadPersonas = parseInt(numeroPersonas, 10);
     if (isNaN(cantidadPersonas) || cantidadPersonas < 1) {
       setErrorForm(language === 'en' ? 'Please specify at least 1 person.' : 'Por favor indica al menos 1 persona.');
@@ -254,8 +520,11 @@ const Reservas = () => {
     const saldoPendienteCalculado = esPagoTotal ? 0 : (precioTotalCalculado - pagoInicialCalculado);
 
     try {
+      setGuardandoReserva(true);
       const payload = {
         usuario_id: usuarioId,
+        nombre_completo: nombreCompleto,
+        celular: celular,
         lugar_id: selectedTour.id,
         numero_personas: cantidadPersonas,
         fecha: fechaTour,
@@ -263,7 +532,9 @@ const Reservas = () => {
         idioma: idiomaFinal,
         metodo_pago: metodoPagoFinal,
         opcion_pago: esPagoTotal ? "Pagar el total" : "Pagar el 50%",
-        precio_total: precioTotalCalculado
+        precio_total: precioTotalCalculado,
+        mp_payment_id: pagoVerificado.paymentId,
+        monto_abonado: pagoVerificado.monto || pagoInicialCalculado
       };
 
       const res = await createReserva(payload);
@@ -277,12 +548,18 @@ const Reservas = () => {
           hora: horaFinal,
           personas: cantidadPersonas,
           idioma: idiomaFinal,
-          metodo: metodoPagoFinal,
+          metodo: `Mercado Pago (${pagoVerificado.metodo_pago ? pagoVerificado.metodo_pago.toUpperCase() : metodoPagoFinal})`,
           total: precioTotalCalculado,
-          pagoInicial: pagoInicialCalculado,
-          saldoPendiente: saldoPendienteCalculado
+          pagoInicial: res.data.monto_pagado !== undefined ? res.data.monto_pagado : (pagoVerificado.aprobado ? (pagoVerificado.monto || pagoInicialCalculado) : 0),
+          saldoPendiente: res.data.saldo_pendiente !== undefined ? res.data.saldo_pendiente : (pagoVerificado.aprobado ? saldoPendienteCalculado : precioTotalCalculado),
+          mpPaymentId: pagoVerificado.paymentId,
+          esPendiente: !!pagoVerificado.pendiente
         });
 
+        // Limpiar estados y borrador
+        sessionStorage.removeItem("emitours_temp_reserva");
+        setBorradorPendiente(null);
+        setPagoVerificado(null);
         setSelectedTour(null);
         cargarDatos();
       } else {
@@ -290,8 +567,10 @@ const Reservas = () => {
       }
     } catch (err) {
       console.error(err);
-      const msg = err.response?.data?.mensaje || err.message || "Error al realizar reserva";
+      let msg = err.response?.data?.mensaje || err.message || "Error al realizar reserva";
       setErrorForm(msg);
+    } finally {
+      setGuardandoReserva(false);
     }
   };
 
@@ -326,11 +605,147 @@ const Reservas = () => {
                 <strong>{language === 'en' ? 'Remaining balance:' : 'Saldo restante:'}</strong> ${mensajeExito.saldoPendiente.toLocaleString()} COP
               </p>
               <p><strong>{t.col_metodo_pago}:</strong> {mensajeExito.metodo}</p>
-              <p className="estado-badge">{t.estado_pendiente}</p>
+              {mensajeExito.mpPaymentId && (
+                <p><strong>{language === 'en' ? 'Mercado Pago ID:' : 'ID Transacción MP:'}</strong> <code>#{mensajeExito.mpPaymentId}</code></p>
+              )}
+              <p className="estado-badge" style={{
+                background: mensajeExito.esPendiente ? '#fffbeb' : '#ecfdf5',
+                color: mensajeExito.esPendiente ? '#b45309' : '#059669',
+                borderColor: mensajeExito.esPendiente ? '#f59e0b' : '#10b981'
+              }}>
+                {mensajeExito.esPendiente
+                  ? (language === 'en' ? '⏳ Pending Bank Acreditation' : '⏳ Pendiente de Acreditación (Bancolombia / Efecty)')
+                  : (language === 'en' ? '✓ Confirmed' : '✓ Confirmada')}
+              </p>
+              {mensajeExito.esPendiente && (
+                <div style={{
+                  background: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  marginTop: '12px',
+                  fontSize: '12.5px',
+                  color: '#92400e',
+                  lineHeight: '1.45'
+                }}>
+                  ℹ️ {language === 'en'
+                    ? 'Your booking is registered and your spot is reserved. Once your bank transfer or cash deposit is verified by Mercado Pago, your booking will automatically update to Confirmed.'
+                    : 'Tu cupo ha sido reservado. Tan pronto como tu entidad bancaria (Bancolombia) o punto físico (Efecty) confirme la acreditación del pago, tu reserva se actualizará automáticamente a Confirmada.'}
+                </div>
+              )}
             </div>
 
             <button className="btn-confirmar-modal" onClick={() => setMensajeExito(null)}>
               {language === 'en' ? 'Understood!' : '¡Entendido!'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* BANNER DE RECUPERACIÓN SI QUEDÓ UN PAGO PENDIENTE DE VERIFICAR EN MERCADO PAGO */}
+      {borradorPendiente && (
+        <div style={{
+          background: '#fffbeb',
+          border: '1.5px solid #f59e0b',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          margin: '20px auto 25px auto',
+          maxWidth: '1200px',
+          boxShadow: '0 4px 12px rgba(245, 158, 11, 0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '28px' }}>⏳</span>
+              <div>
+                <strong style={{ color: '#92400e', fontSize: '15px' }}>
+                  {language === 'en'
+                    ? `Did you complete a payment on Mercado Pago for ${borradorPendiente.tourNombre || 'your tour'}?`
+                    : `¿Completaste el pago en Mercado Pago para ${borradorPendiente.tourNombre || 'tu tour'}?`}
+                </strong>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#b45309', lineHeight: '1.4' }}>
+                  {language === 'en'
+                    ? 'If Mercado Pago displayed "We are processing your payment" (Bancolombia, cash or pending card), enter your transaction ID (#...) to register and confirm your booking right now.'
+                    : 'Si Mercado Pago mostró la pantalla naranja "Estamos procesando tu pago" (Bancolombia, transferencia o tarjeta en proceso), ingresa el número de operación o ID de pago para confirmar tu reserva inmediatamente.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.removeItem("emitours_temp_reserva");
+                setBorradorPendiente(null);
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#9ca3af',
+                cursor: 'pointer',
+                fontSize: '18px',
+                lineHeight: '1'
+              }}
+              title={language === 'en' ? 'Dismiss' : 'Descartar'}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder={language === 'en' ? 'e.g. 184373816725 (Payment ID)' : 'Ej: 184373816725 (Número de operación / ID Transacción)'}
+              value={inputPaymentIdManual}
+              onChange={(e) => setInputPaymentIdManual(e.target.value)}
+              style={{
+                flex: '1',
+                minWidth: '240px',
+                padding: '9px 12px',
+                fontSize: '13.5px',
+                borderRadius: '8px',
+                border: '1.5px solid #d97706',
+                outline: 'none',
+                background: '#ffffff'
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => inputPaymentIdManual && verificarRetornoMercadoPago(inputPaymentIdManual.trim(), 'pending')}
+              disabled={verificandoMP || !inputPaymentIdManual.trim()}
+              style={{
+                padding: '9px 18px',
+                background: '#d97706',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                opacity: (verificandoMP || !inputPaymentIdManual.trim()) ? 0.6 : 1
+              }}
+            >
+              {verificandoMP ? (language === 'en' ? 'Checking...' : 'Verificando...') : (language === 'en' ? 'Verify & Confirm Booking' : '✓ Verificar y Confirmar Reserva')}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDetectarUltimoPago}
+              disabled={verificandoMP}
+              style={{
+                padding: '9px 18px',
+                background: '#0284c7',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {verificandoMP ? '🔄 Buscando pago...' : '🔄 Detectar automáticamente mi último pago'}
             </button>
           </div>
         </div>
@@ -575,16 +990,251 @@ const Reservas = () => {
               <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} required>
                 {METODOS_PAGO_PERMITIDOS.map((mp, index) => (
                   <option key={index} value={mp}>
-                    {mp === 'Pago en efectivo' && language === 'en' ? 'Cash payment' : (mp === 'Datáfono' && language === 'en' ? 'Card Terminal' : mp)}
+                    {mp}
                   </option>
                 ))}
               </select>
 
-              <button type="submit" className="btn-confirmar-modal" style={{ marginTop: '16px' }}>
-                {tipoPago === 'total' 
-                  ? `${t.confirmar_reserva} (${language === 'en' ? 'Pay 100%' : 'Pagar 100%'})` 
-                  : `${t.confirmar_reserva} (${language === 'en' ? 'Deposit 50%' : 'Abonar 50%'})`}
+              {/* SECCIÓN INTERACTIVA DE MERCADO PAGO CHECKOUT PRO */}
+              <div className="mp-checkout-section">
+                {verificandoMP && (
+                  <div className="card-estado-mp pendiente">
+                    <div className="card-estado-mp-header">
+                      <span>⏳ Verificando transacción con Mercado Pago...</span>
+                    </div>
+                  </div>
+                )}
+
+                {pagoVerificado && pagoVerificado.aprobado && (
+                  <div className="card-estado-mp aprobado">
+                    <div className="card-estado-mp-header">
+                      <span>✅ Pago Aprobado por Mercado Pago (Sandbox)</span>
+                    </div>
+                    <div className="card-estado-mp-detalles">
+                      <span><strong>ID Transacción:</strong> #{pagoVerificado.paymentId}</span>
+                      <span><strong>Monto Pagado:</strong> ${(pagoVerificado.monto || 0).toLocaleString()} COP</span>
+                      <span><strong>Medio:</strong> {pagoVerificado.metodo_pago ? pagoVerificado.metodo_pago.toUpperCase() : metodoPago}</span>
+                      {pagoVerificado.ya_utilizado ? (
+                        <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
+                          ⚠️ Atención: Esta transacción ya fue asociada a la reserva {pagoVerificado.reserva?.codigo || ''}.
+                        </span>
+                      ) : (
+                        <div style={{
+                          marginTop: '6px',
+                          padding: '8px 12px',
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          borderRadius: '6px',
+                          color: '#065f46',
+                          fontSize: '12.5px',
+                          fontWeight: '600'
+                        }}>
+                          👉 {language === 'en'
+                            ? 'Payment approved! Please click "Confirm Booking" below to save your booking.'
+                            : '¡Pago verificado! Pulsa el botón "Confirmar reserva" abajo para guardar tu reserva en el sistema.'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {pagoVerificado && pagoVerificado.pendiente && (
+                  <div className="card-estado-mp pendiente">
+                    <div className="card-estado-mp-header">
+                      <span>⏳ Pago en proceso / Pendiente</span>
+                    </div>
+                    <div className="card-estado-mp-detalles">
+                      <span><strong>ID Transacción:</strong> #{pagoVerificado.paymentId}</span>
+                      <span><strong>Medio:</strong> {pagoVerificado.metodo_pago ? pagoVerificado.metodo_pago.toUpperCase() : 'Bancolombia / Efecty / Transferencia'}</span>
+                      <span>El pago está siendo procesado por la entidad bancaria o pendiente de consignación.</span>
+                      {pagoVerificado.ya_utilizado ? (
+                        <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
+                          ⚠️ Atención: Esta transacción ya fue asociada a la reserva {pagoVerificado.reserva?.codigo || ''}.
+                        </span>
+                      ) : (
+                        <div style={{
+                          marginTop: '6px',
+                          padding: '8px 12px',
+                          background: '#fffbeb',
+                          border: '1px solid #fde68a',
+                          borderRadius: '6px',
+                          color: '#92400e',
+                          fontSize: '12.5px',
+                          fontWeight: '600'
+                        }}>
+                          👉 {language === 'en'
+                            ? 'Payment in process. Click "Confirm Booking" below to secure your spot as pending.'
+                            : 'Pago en proceso. Pulsa el botón "Confirmar reserva" abajo para registrar tu cupo en estado pendiente.'}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-reintentar-mp"
+                      onClick={() => verificarRetornoMercadoPago(pagoVerificado.paymentId, 'pending')}
+                      style={{ marginTop: '8px' }}
+                    >
+                      🔄 Re-verificar estado
+                    </button>
+                  </div>
+                )}
+
+                {pagoVerificado && pagoVerificado.rechazado && (
+                  <div className="card-estado-mp rechazado">
+                    <div className="card-estado-mp-header">
+                      <span>❌ Pago Rechazado / No Aprobado</span>
+                    </div>
+                    <div className="card-estado-mp-detalles">
+                      <span><strong>ID Transacción:</strong> #{pagoVerificado.paymentId}</span>
+                      <span>La transacción no fue autorizada o fue cancelada. Puedes reintentar con otro medio.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-reintentar-mp"
+                      onClick={handleIniciarPagoMercadoPago}
+                      disabled={cargandoMP}
+                    >
+                      🔄 Reintentar pago con Mercado Pago
+                    </button>
+                  </div>
+                )}
+
+                {/* BOTÓN PARA INICIAR EL PAGO SI AÚN NO ESTÁ APROBADO */}
+                {(!pagoVerificado || (!pagoVerificado.aprobado && !pagoVerificado.pendiente && !pagoVerificado.rechazado)) && (
+                  <>
+                    <div style={{
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      marginBottom: '10px',
+                      fontSize: '12.5px',
+                      color: '#1e40af',
+                      lineHeight: '1.45'
+                    }}>
+                      <strong>💡 Datos oficiales de prueba Sandbox (Colombia):</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        • <strong>Tarjeta:</strong> <code>5254 1336 7440 3564</code> (Mastercard) o <code>4013 5406 8274 6260</code> (Visa)<br />
+                        • <strong>Titular:</strong> <strong>APRO</strong> | <strong>Vencimiento:</strong> <strong>11/30</strong> | <strong>CVV:</strong> <strong>123</strong><br />
+                        • <strong>Documento:</strong> <strong>123456789</strong> (o cualquier CC válida de 8-10 dígitos)<br />
+                        • <em>Recomendación:</em> Abre en <strong>ventana de incógnito</strong> si tienes iniciada tu cuenta personal de Mercado Pago.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn-pagar-mp"
+                      onClick={handleIniciarPagoMercadoPago}
+                      disabled={cargandoMP}
+                    >
+                      {cargandoMP ? (
+                        <span>⏳ Abriendo Checkout Pro...</span>
+                      ) : (
+                        <>
+                          <span>💳 Pagar con Mercado Pago Sandbox</span>
+                          <span style={{ fontSize: '12.5px', opacity: 0.9 }}>
+                            ({tipoPago === 'total' ? '100%' : '50%'})
+                          </span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* SECCIÓN OPCIONAL: VERIFICACIÓN MANUAL DE ID DE PAGO (ÚTIL EN ENTORNO LOCALHOST) */}
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px'
+                    }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                        ¿Completaste el pago en Mercado Pago? Verifica tu transacción aquí:
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Ej: 12345678901 (Número de operación / Payment ID)"
+                          value={inputPaymentIdManual}
+                          onChange={(e) => setInputPaymentIdManual(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '8px 10px',
+                            fontSize: '12.5px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => inputPaymentIdManual && verificarRetornoMercadoPago(inputPaymentIdManual.trim(), 'approved')}
+                          disabled={verificandoMP || !inputPaymentIdManual.trim()}
+                          style={{
+                            padding: '8px 14px',
+                            background: '#0284c7',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12.5px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {verificandoMP ? 'Verificando...' : 'Verificar ID'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleDetectarUltimoPago}
+                          disabled={verificandoMP}
+                          style={{
+                            padding: '8px 14px',
+                            background: '#0369a1',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12.5px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {verificandoMP ? 'Buscando...' : '🔄 Detectar último pago'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* BOTÓN FINAL DE CONFIRMAR RESERVA (HABILITADO TRAS PAGO APROBADO O EN PROCESO) */}
+              <button
+                type="submit"
+                className="btn-confirmar-modal"
+                disabled={guardandoReserva || !pagoVerificado || (!pagoVerificado.aprobado && !pagoVerificado.pendiente) || pagoVerificado.ya_utilizado}
+                style={{
+                  marginTop: '12px',
+                  backgroundColor: pagoVerificado?.pendiente ? '#d97706' : (pagoVerificado?.aprobado ? '#059669' : undefined),
+                  opacity: (guardandoReserva || !pagoVerificado || (!pagoVerificado.aprobado && !pagoVerificado.pendiente) || pagoVerificado.ya_utilizado) ? 0.6 : 1,
+                  cursor: (guardandoReserva || !pagoVerificado || (!pagoVerificado.aprobado && !pagoVerificado.pendiente) || pagoVerificado.ya_utilizado) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {guardandoReserva
+                  ? (language === 'en' ? '⏳ Confirming booking...' : '⏳ Guardando reserva...')
+                  : pagoVerificado && pagoVerificado.aprobado && !pagoVerificado.ya_utilizado
+                    ? `✓ ${t.confirmar_reserva} (${language === 'en' ? 'Payment Approved' : 'Pago Verificado'})`
+                    : pagoVerificado && pagoVerificado.pendiente && !pagoVerificado.ya_utilizado
+                      ? `⏳ ${t.confirmar_reserva} (${language === 'en' ? 'Payment in Process' : 'Pago en Proceso / Pendiente'})`
+                      : `🔒 ${t.confirmar_reserva} (${language === 'en' ? 'Requires Payment' : 'Requiere Pago Previo'})`}
               </button>
+
+              {(!pagoVerificado || (!pagoVerificado.aprobado && !pagoVerificado.pendiente)) && (
+                <small className="aviso-pago-bloqueado">
+                  ℹ️ {language === 'en' 
+                    ? 'First complete or initiate your payment in Mercado Pago to enable booking confirmation.'
+                    : 'Primero inicia o completa el pago en Mercado Pago para habilitar la confirmación.'}
+                </small>
+              )}
             </form>
           </div>
         </div>
@@ -615,8 +1265,10 @@ const Reservas = () => {
                 {misReservas.map((r) => {
                   const esPagado = (r.estado_pago || '').toLowerCase().includes('pagad');
                   const tot = Number(r.precio_total || 0);
-                  const abono = esPagado ? tot : Math.round(tot * 0.5);
-                  const pendiente = esPagado ? 0 : (tot - abono);
+                  const abono = (r.monto_pagado !== undefined && Number(r.monto_pagado) > 0)
+                    ? Number(r.monto_pagado)
+                    : (esPagado ? tot : Math.round(tot * 0.5));
+                  const pendiente = Math.max(0, tot - abono);
 
                   const getEstadoReservaLabel = (st) => {
                     const s = (st || '').toLowerCase();
