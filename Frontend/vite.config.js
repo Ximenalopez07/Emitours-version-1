@@ -13,8 +13,4 @@ export default defineConfig({
       },
     },
   },
-
-  preview: {
-    allowedHosts: ['distinguished-vibrancy-production.up.railway.app'],
-  },
 })

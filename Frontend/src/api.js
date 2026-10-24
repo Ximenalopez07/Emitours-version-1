@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api', // Esto usará el proxy configurado en vite.config.js
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
 // Interceptor para inyectar Token de Administrador o Usuario en todas las peticiones
