@@ -161,6 +161,10 @@ exports.crearPreferencia = async (req, res) => {
       ...(webhookUrl ? { notification_url: webhookUrl } : {}),
       metadata: {
         usuario_id: uId,
+        nombre_completo: (cliente?.nombre_usuario || req.body.nombre_completo || 'Cliente EmiTours').trim(),
+        celular: (cliente?.telefono || req.body.celular || '').trim(),
+        tour_nombre: lugar.nombre,
+        precio_unitario: (lugar.precio || 150000),
         lugar_id: lId,
         numero_personas: cantidadPersonas,
         fecha: fechaStr,
@@ -342,18 +346,18 @@ exports.procesarWebhook = async (req, res) => {
         const estado = paymentData.status; // 'approved', 'pending', 'in_process', 'rejected'
         const monto = parseFloat(paymentData.transaction_amount || 0);
 
-        let estadoReserva = 'pendiente';
-        let estadoPago = 'pendiente';
+        const meta = paymentData.metadata || {};
+        const esPagoTotal = (meta.tipo_pago === 'total');
 
         if (estado === 'approved') {
           estadoReserva = 'confirmada';
-          estadoPago = 'pagado';
+          estadoPago = esPagoTotal ? 'pagado' : 'parcial';
         } else if (estado === 'rejected' || estado === 'cancelled') {
           estadoReserva = 'cancelada';
           estadoPago = 'pendiente';
         }
 
-        // Actualizar reserva por mp_payment_id si ya existe registrada
+        // 1. Actualizar reserva por mp_payment_id si ya existe registrada
         const [resUpdate] = await db.promise().query(
           `UPDATE reservas 
            SET estado = ?, 
@@ -364,6 +368,31 @@ exports.procesarWebhook = async (req, res) => {
         );
 
         console.log(`[MercadoPago Webhook] Pago ${paymentId} (${estado}): ${resUpdate.affectedRows} reserva(s) sincronizada(s).`);
+
+        // 2. Si la reserva aún no existía y el pago fue aprobado, crearla automáticamente como respaldo
+        if (resUpdate.affectedRows === 0 && estado === 'approved' && meta.usuario_id && meta.lugar_id) {
+          const [checkDup] = await db.promise().query("SELECT id FROM reservas WHERE mp_payment_id = ?", [String(paymentId)]);
+          if (!checkDup || checkDup.length === 0) {
+            const uId = meta.usuario_id;
+            const lId = meta.lugar_id;
+            const cant = meta.numero_personas || 1;
+            const fechaStr = meta.fecha;
+            const horaSql = meta.hora || '07:00 AM';
+            const idiomaClean = meta.idioma || 'es';
+            const precioTot = parseFloat(meta.precio_total || monto);
+            const codigo = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
+
+            await db.promise().query(
+              `INSERT INTO reservas (
+                usuario_id, lugar_id, fecha, hora, numero_personas, idioma,
+                precio_total, metodo_pago, estado_pago, estado, codigo,
+                mp_payment_id, monto_pagado
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmada', ?, ?, ?)`,
+              [uId, lId, fechaStr, horaSql, cant, idiomaClean, precioTot, 'mercadopago', estadoPago, codigo, String(paymentId), monto]
+            );
+            console.log(`[MercadoPago Webhook] 🚀 Reserva ${codigo} creada automáticamente desde Webhook para pago #${paymentId}.`);
+          }
+        }
       }
     }
   } catch (error) {

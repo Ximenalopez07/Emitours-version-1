@@ -239,8 +239,15 @@ exports.create = async (req, res) => {
             }
 
             if (paymentData.status === 'approved') {
-              // Pago aprobado inmediatamente (Tarjeta, PSE acreditado)
-              montoPagadoFinal = parseFloat(paymentData.transaction_amount || montoCalculado);
+              // Validar monto recibido frente al importe esperado
+              const montoTransaccion = parseFloat(paymentData.transaction_amount || 0);
+              if (montoTransaccion < (montoCalculado - 50)) {
+                return res.status(400).json({
+                  status: 'ERROR',
+                  mensaje: `El monto pagado en Mercado Pago ($${montoTransaccion} COP) es menor al importe esperado para esta reserva ($${montoCalculado} COP).`
+                });
+              }
+              montoPagadoFinal = montoTransaccion;
               estadoEnum = 'confirmada';
               estadoPagoEnum = esPagoTotal ? 'pagado' : 'parcial';
             } else if (paymentData.status === 'pending' || paymentData.status === 'in_process' || paymentData.status === 'authorized') {
