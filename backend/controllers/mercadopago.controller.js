@@ -1,14 +1,35 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const db = require('../config/db');
 
 // Inicializar cliente Mercado Pago con Access Token del entorno
 const getMercadoPagoClient = () => {
-  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  const rawToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
+  const token = rawToken.trim();
+
+  const tokenDefinido = Boolean(token);
+  const tokenLongitud = token.length;
+  const tokenPrefijo = tokenDefinido ? token.substring(0, 8) : 'N/A';
+  const tokenSufijo = tokenDefinido && tokenLongitud > 4 ? `...${token.slice(-4)}` : 'N/A';
+  const tieneEspaciosOcultos = rawToken !== token;
+
+  console.log('----------------------------------------------------');
+  console.log('[MercadoPago Diagnóstico] Inicialización del SDK:');
+  console.log(`  - Token configurado en env: ${tokenDefinido ? 'SÍ' : 'NO'}`);
+  console.log(`  - Longitud del token:       ${tokenLongitud} caracteres`);
+  console.log(`  - Formato / Prefijo:        ${tokenPrefijo} (${token.startsWith('TEST-') ? 'Sandbox / Pruebas' : (token.startsWith('APP_USR-') ? 'Producción / Test Seller' : 'Otro')})`);
+  console.log(`  - Sufijo seguro:            ${tokenSufijo}`);
+  console.log(`  - Espacios ocultos:         ${tieneEspaciosOcultos ? 'ADVERTENCIA: Tenía espacios al inicio/final (fueron recortados)' : 'Ninguno (Limpio)'}`);
+  console.log('----------------------------------------------------');
+
   if (!token) {
-    console.warn('[MercadoPago] ⚠️ MERCADO_PAGO_ACCESS_TOKEN no está definido en .env');
+    console.error('[MercadoPago Diagnóstico] ❌ MERCADO_PAGO_ACCESS_TOKEN no está definido en backend/.env');
+    throw new Error('MERCADO_PAGO_ACCESS_TOKEN no está configurado en el archivo .env del backend.');
   }
+
   return new MercadoPagoConfig({
-    accessToken: token || '',
+    accessToken: token,
     options: { timeout: 10000 }
   });
 };
@@ -136,8 +157,14 @@ exports.crearPreferencia = async (req, res) => {
     // Mercado Pago exige que para usar auto_return: 'approved', la URL sea HTTPS pública (no localhost)
     const isPublicHttps = returnUrl.startsWith('https://') && !returnUrl.includes('localhost') && !returnUrl.includes('127.0.0.1');
 
-    // Webhook URL si está configurada en .env o si hay URL pública disponible
-    const webhookUrl = process.env.WEBHOOK_URL || (isPublicHttps ? `${process.env.BACKEND_URL || ''}/mercadopago/webhook` : null);
+    // Webhook URL: Solo se incluye si es una URL HTTPS pública absoluta y válida
+    let webhookUrl = null;
+    if (process.env.WEBHOOK_URL && process.env.WEBHOOK_URL.startsWith('https://')) {
+      webhookUrl = process.env.WEBHOOK_URL.trim();
+    } else if (process.env.BACKEND_URL && process.env.BACKEND_URL.startsWith('https://')) {
+      const backendBase = process.env.BACKEND_URL.replace(/\/+$/, '');
+      webhookUrl = `${backendBase}/mercadopago/webhook`;
+    }
 
     const preferenceBody = {
       items: [
@@ -179,6 +206,13 @@ exports.crearPreferencia = async (req, res) => {
       external_reference: `EMT-${Date.now()}-${uId}`
     };
 
+    console.log('[MercadoPago Diagnóstico] Enviando petición a Mercado Pago:');
+    console.log('  - Cantidad de items:', preferenceBody.items.length);
+    console.log('  - Item 1:', { title: preferenceBody.items[0]?.title, unit_price: preferenceBody.items[0]?.unit_price, currency_id: preferenceBody.items[0]?.currency_id });
+    console.log('  - Back URLs:', preferenceBody.back_urls);
+    console.log('  - Payer incluido:', payerObj ? 'Sí (Oculto por seguridad)' : 'No (Omitido)');
+    console.log('  - External reference:', preferenceBody.external_reference);
+
     const mpRes = await preference.create({ body: preferenceBody });
     const checkoutUrl = mpRes.sandbox_init_point || mpRes.init_point;
 
@@ -187,7 +221,6 @@ exports.crearPreferencia = async (req, res) => {
     console.log(`  - Collector ID: ${mpRes.collector_id}`);
     console.log(`  - Sandbox Init Point: ${mpRes.sandbox_init_point}`);
     console.log(`  - Init Point: ${mpRes.init_point}`);
-    console.log(`  - Payer incluido en preferencia: ${payerObj ? payerObj.email : 'Omitido (Permite iniciar sesión con Test Buyer libremente)'}`);
     console.log(`  - Back URLs: ${returnUrl}`);
     console.log(`====================================================`);
 
@@ -203,10 +236,48 @@ exports.crearPreferencia = async (req, res) => {
       esPagoTotal
     });
   } catch (error) {
-    console.error('[MercadoPago] Error al crear preferencia:', error);
+    const errorMsg = error?.message || 'Error desconocido';
+    const errorName = error?.name || error?.constructor?.name || 'Error';
+    const errorStatus = error?.status || error?.statusCode || (error?.apiResponse?.status) || null;
+    const errorCode = error?.error || (error?.apiResponse?.data?.error) || null;
+    const errorCauses = error?.causes || error?.cause || (error?.apiResponse?.data?.cause) || null;
+
+    // Extracción segura de propiedades del error sin exponer credenciales
+    const detalleSeguro = {};
+    try {
+      const keys = Object.getOwnPropertyNames(error || {});
+      for (const k of keys) {
+        if (/token|auth|secret|key|password|credential/i.test(k)) {
+          detalleSeguro[k] = '[OCULTO_POR_SEGURIDAD]';
+        } else if (k === 'stack') {
+          detalleSeguro[k] = (error.stack || '').split('\n').slice(0, 2).join(' -> ');
+        } else {
+          detalleSeguro[k] = error[k];
+        }
+      }
+    } catch (e) {
+      detalleSeguro.error_serializacion = e.message;
+    }
+
+    console.error('====================================================');
+    console.error('[MercadoPago Diagnóstico] ❌ EXCEPCIÓN AL CREAR PREFERENCIA:');
+    console.error(`  - Nombre excepción:       ${errorName}`);
+    console.error(`  - Código HTTP MP:         ${errorStatus}`);
+    console.error(`  - Mensaje devuelto:       ${errorMsg}`);
+    console.error(`  - Campo "error":          ${typeof errorCode === 'object' ? JSON.stringify(errorCode) : errorCode}`);
+    console.error(`  - Campo "cause/causes":   `, errorCauses);
+    console.error(`  - Detalle completo:       `, JSON.stringify(detalleSeguro, null, 2));
+    console.error('====================================================');
+
     return res.status(500).json({
       status: 'ERROR',
-      mensaje: 'Error al generar checkout de Mercado Pago: ' + (error.message || 'Error desconocido')
+      mensaje: 'Error al generar checkout de Mercado Pago: ' + errorMsg,
+      diagnostico: {
+        nombre: errorName,
+        status: errorStatus,
+        codigo_error: errorCode,
+        causas: errorCauses
+      }
     });
   }
 };
@@ -327,27 +398,60 @@ exports.getConfigPublica = (req, res) => {
 };
 
 // ========================================================
+// 3.1. COMPROBACIÓN DE SALUD / HEALTHCHECK DEL WEBHOOK
+// ========================================================
+exports.estadoWebhook = (req, res) => {
+  return res.status(200).json({
+    status: 'OK',
+    mensaje: 'Webhook de Mercado Pago activo y listo para recibir notificaciones en EmiTours.',
+    metodos_admitidos: ['POST', 'GET'],
+    eventos_esperados: ['payment', 'collection', 'payment.created', 'payment.updated'],
+    timestamp: new Date().toISOString()
+  });
+};
+
+// ========================================================
 // 4. WEBHOOK / NOTIFICACIONES IPN DE MERCADO PAGO
 // ========================================================
 exports.procesarWebhook = async (req, res) => {
   try {
-    const topic = req.query.topic || req.query.type || req.body?.type;
-    const paymentId = req.query.id || req.query['data.id'] || req.body?.data?.id;
-
-    // Responder inmediatamente con 200 OK a Mercado Pago para confirmar recepción
+    // 1. Responder de inmediato 200 OK a Mercado Pago para confirmar recepción y evitar reintentos
     res.status(200).send('OK');
 
-    if ((topic === 'payment' || topic === 'collection') && paymentId) {
+    // 2. Extraer topic / type y paymentId desde cualquier versión de payload (Webhook v1, v2 o IPN)
+    const topic = req.query.topic || req.query.type || req.body?.type || req.body?.action || null;
+    const paymentId = req.query.id || req.query['data.id'] || req.body?.data?.id || (topic === 'payment' ? req.body?.id : null);
+
+    console.log('[MercadoPago Webhook] Notificación recibida:', {
+      metodo: req.method,
+      topic: topic || 'sin_topic',
+      paymentId: paymentId || 'No provisto (posible ping de prueba o simulación)',
+      fecha: new Date().toISOString()
+    });
+
+    // Validar si es una prueba enviada desde el panel de Developers ("Simular notificación")
+    if (req.body?.action === 'test' || req.body?.type === 'test' || topic === 'test') {
+      console.log('[MercadoPago Webhook] ✅ Prueba de notificación recibida y confirmada exitosamente desde el panel de Developers.');
+      return;
+    }
+
+    const esEventoPago = topic === 'payment' || topic === 'collection' || (typeof topic === 'string' && topic.startsWith('payment'));
+
+    if (esEventoPago && paymentId) {
+      console.log(`[MercadoPago Webhook] Verificando detalles del pago #${paymentId} en la API de Mercado Pago...`);
       const client = getMercadoPagoClient();
       const payment = new Payment(client);
       const paymentData = await payment.get({ id: String(paymentId) });
 
       if (paymentData) {
-        const estado = paymentData.status; // 'approved', 'pending', 'in_process', 'rejected'
+        const estado = paymentData.status; // 'approved', 'pending', 'in_process', 'rejected', 'cancelled'
         const monto = parseFloat(paymentData.transaction_amount || 0);
 
         const meta = paymentData.metadata || {};
         const esPagoTotal = (meta.tipo_pago === 'total');
+
+        let estadoReserva = 'pendiente';
+        let estadoPago = 'pendiente';
 
         if (estado === 'approved') {
           estadoReserva = 'confirmada';
@@ -355,7 +459,12 @@ exports.procesarWebhook = async (req, res) => {
         } else if (estado === 'rejected' || estado === 'cancelled') {
           estadoReserva = 'cancelada';
           estadoPago = 'pendiente';
+        } else if (estado === 'pending' || estado === 'in_process') {
+          estadoReserva = 'pendiente';
+          estadoPago = 'pendiente';
         }
+
+        console.log(`[MercadoPago Webhook] Estado verificado para pago #${paymentId}: ${estado} -> Reserva: ${estadoReserva}, Pago: ${estadoPago}, Monto: $${monto}`);
 
         // 1. Actualizar reserva por mp_payment_id si ya existe registrada
         const [resUpdate] = await db.promise().query(
@@ -367,7 +476,7 @@ exports.procesarWebhook = async (req, res) => {
           [estadoReserva, estadoPago, estado, monto, String(paymentId)]
         );
 
-        console.log(`[MercadoPago Webhook] Pago ${paymentId} (${estado}): ${resUpdate.affectedRows} reserva(s) sincronizada(s).`);
+        console.log(`[MercadoPago Webhook] Pago #${paymentId} (${estado}): ${resUpdate.affectedRows} reserva(s) sincronizada(s) en BD.`);
 
         // 2. Si la reserva aún no existía y el pago fue aprobado, crearla automáticamente como respaldo
         if (resUpdate.affectedRows === 0 && estado === 'approved' && meta.usuario_id && meta.lugar_id) {
@@ -396,7 +505,7 @@ exports.procesarWebhook = async (req, res) => {
       }
     }
   } catch (error) {
-    console.error('[MercadoPago Webhook] Error al procesar notificación:', error.message);
+    console.error('[MercadoPago Webhook] ❌ Error al procesar notificación:', error.message);
   }
 };
 
