@@ -186,6 +186,14 @@ exports.crearPreferencia = async (req, res) => {
       },
       ...(isPublicHttps ? { auto_return: 'approved' } : {}),
       ...(webhookUrl ? { notification_url: webhookUrl } : {}),
+      // Configuración de métodos de pago para demostración académica:
+      // Se excluyen transferencias bancarias (PSE) para evitar fallos del simulador bancario y mantener el flujo enfocado en Tarjetas y Efectivo
+      payment_methods: {
+        excluded_payment_types: [
+          { id: 'bank_transfer' }
+        ],
+        installments: 12
+      },
       metadata: {
         usuario_id: uId,
         nombre_completo: (cliente?.nombre_usuario || req.body.nombre_completo || 'Cliente EmiTours').trim(),
