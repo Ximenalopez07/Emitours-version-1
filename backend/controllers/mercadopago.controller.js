@@ -329,6 +329,15 @@ exports.verificarPago = async (req, res) => {
     const esPendiente = (estadoMP === 'pending' || estadoMP === 'in_process' || estadoMP === 'authorized');
     const esRechazado = (estadoMP === 'rejected' || estadoMP === 'cancelled' || estadoMP === 'refunded' || estadoMP === 'charged_back');
 
+    console.log(`[MercadoPago Diagnóstico] Transacción consultada #${paymentId}:`, {
+      metodo: paymentData.payment_method_id,
+      tipo_metodo: paymentData.payment_type_id,
+      estado: estadoMP,
+      detalle_estado: paymentData.status_detail,
+      monto: paymentData.transaction_amount,
+      moneda: paymentData.currency_id
+    });
+
     return res.json({
       status: 'OK',
       paymentId: String(paymentData.id),
