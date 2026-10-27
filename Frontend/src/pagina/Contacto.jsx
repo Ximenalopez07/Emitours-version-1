@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { UIContext } from "../context/UIContext";
 import { translations } from "../utils/translations";
 import ChatBot from "../components/ChatBot";
@@ -7,6 +7,10 @@ import "./Contacto.css";
 const Contacto = () => {
   const { language } = useContext(UIContext);
   const t = translations[language] || translations.es;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   return (
     <div className="contacto-container">

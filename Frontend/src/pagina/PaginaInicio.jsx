@@ -1,10 +1,9 @@
 import React, { useContext, useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { UIContext } from "../context/UIContext";
 import { translations } from "../utils/translations";
 import { getLugares } from "../api";
 import { FaChevronLeft, FaChevronRight, FaArrowRight } from "react-icons/fa";
-import ChatBot from "../components/ChatBot";
 import "./PaginaInicio.css";
 
 // Assets
@@ -152,11 +151,9 @@ function PlaceCarousel({ place, t }) {
 }
 
 function PaginaInicio() {
+  const navigate = useNavigate();
   const { language } = useContext(UIContext);
   const t = translations[language] || translations.es;
-
-  // Estado para abrir y cerrar el ChatBot real funcional
-  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Lugares obtenidos de la API
   const [lugaresDB, setLugaresDB] = useState([]);
@@ -304,7 +301,7 @@ function PaginaInicio() {
                 <button
                   type="button"
                   className="chatbot-banner-cta-btn"
-                  onClick={() => setIsChatOpen(true)}
+                  onClick={() => navigate("/contacto")}
                 >
                   <span className="btn-chat-icon">💬</span>
                   <span>{t.home_ai_cta || "Hablar con el chatbot"}</span>
@@ -325,8 +322,9 @@ function PaginaInicio() {
 
                 <div
                   className="chatbot-robot-avatar"
-                  onClick={() => setIsChatOpen(true)}
-                  title={t.home_ai_cta || "Abrir Asistente Virtual"}
+                  onClick={() => navigate("/contacto")}
+                  title={t.home_ai_cta || "Hablar con el chatbot"}
+                  style={{ cursor: "pointer" }}
                 >
                   <img
                     src={robotImg}
@@ -421,17 +419,6 @@ function PaginaInicio() {
           </div>
         </div>
       </section>
-
-      {/* ==================================================
-          CHATBOT FUNCIONAL REAL DEL PROYECTO
-          Se abre únicamente al pulsar el botón del banner
-          sin generar botón flotante circular invasivo
-          ================================================== */}
-      <ChatBot
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        hideFloatingButton={true}
-      />
     </div>
   );
 }

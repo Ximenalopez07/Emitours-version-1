@@ -44,6 +44,7 @@ function MainApp() {
           <Route path="/lugares" element={<Lugares />} />
           <Route path="/guias" element={<Guias />} />
           <Route path="/reservas" element={<Reservas />} />
+          <Route path="/contacto" element={<Contacto />} />
           <Route path="/Contacto" element={<Contacto />} />
           <Route path="/inicioseccion" element={<InicioSeccion />} />
           <Route path="/iniciosesccion" element={<InicioSeccion />} />

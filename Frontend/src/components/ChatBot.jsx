@@ -31,6 +31,8 @@ const PREGUNTAS_MENU_EN = [
   { id: 10, texto: "10. How can I contact EmiTours?" }
 ];
 
+const CHAT_STORAGE_KEY = "emitours_chatbot_history";
+
 const ChatBot = ({
   isOpen: controlledIsOpen,
   onClose: controlledOnClose,
@@ -77,18 +79,43 @@ const ChatBot = ({
     hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   });
 
-  const [chatHistory, setChatHistory] = useState([getMensajeBienvenida()]);
+  // Inicializar historial desde sessionStorage para conservar la conversación al navegar
+  const [chatHistory, setChatHistory] = useState(() => {
+    try {
+      const guardado = sessionStorage.getItem(CHAT_STORAGE_KEY);
+      if (guardado) {
+        const parsed = JSON.parse(guardado);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.warn("No se pudo cargar el historial del chatbot desde sessionStorage:", err);
+    }
+    return [getMensajeBienvenida()];
+  });
   const messagesEndRef = useRef(null);
+
+  // Guardar historial en sessionStorage ante cualquier cambio
+  useEffect(() => {
+    try {
+      if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+        sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatHistory));
+      }
+    } catch (err) {
+      console.warn("No se pudo guardar el historial del chatbot en sessionStorage:", err);
+    }
+  }, [chatHistory]);
 
   // Autenticación de usuario
   const usuarioStr = localStorage.getItem("usuario");
   const token = localStorage.getItem("userToken") || localStorage.getItem("adminToken") || localStorage.getItem("token");
   const isAuthenticated = Boolean(usuarioStr && token);
 
-  // Sincronizar bienvenida al cambiar idioma si solo está el mensaje inicial
+  // Sincronizar bienvenida al cambiar idioma si solo está el mensaje inicial sin interacciones
   useEffect(() => {
     setChatHistory(prev => {
-      if (prev.length === 1 && prev[0].remitente === "bot") {
+      if (prev.length === 1 && prev[0].remitente === "bot" && !prev[0].accion) {
         return [getMensajeBienvenida()];
       }
       return prev;
