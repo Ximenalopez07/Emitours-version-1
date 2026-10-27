@@ -38,6 +38,11 @@ pool.getConnection((err, connection) => {
     if (!errMod) console.log("Columna 'metodo_pago' verificada con soporte para mercadopago.");
   });
 
+  // Asegurar que estado soporte 'pendiente', 'confirmada', 'realizada', 'cancelada'
+  connection.query("ALTER TABLE reservas MODIFY COLUMN estado ENUM('pendiente','confirmada','realizada','cancelada') NOT NULL DEFAULT 'pendiente'", (errMod) => {
+    if (!errMod) console.log("Columna 'estado' de reservas verificada con soporte para cancelada.");
+  });
+
   // Asegurar columna mp_payment_id en reservas
   connection.query("SHOW COLUMNS FROM reservas LIKE 'mp_payment_id'", (errCol, resCol) => {
     if (!errCol && (!resCol || resCol.length === 0)) {

@@ -451,12 +451,208 @@ function generarHtmlRecuperacion(nombre, codigo) {
   `;
 }
 
+/**
+ * Plantilla HTML para notificación de reserva cancelada al Administrador
+ */
+function generarHtmlNotificacionCancelacion(datos) {
+  const {
+    codigo,
+    clienteNombre,
+    clienteCorreo,
+    clienteTelefono,
+    tourNombre,
+    fecha,
+    hora,
+    numeroPersonas,
+    precioTotal,
+    montoPagado,
+    saldoPendiente,
+    fechaCancelacion
+  } = datos;
+
+  const totalFmt = Number(precioTotal || 0).toLocaleString('es-CO');
+  const pagadoFmt = Number(montoPagado || 0).toLocaleString('es-CO');
+  const saldoFmt = Number(saldoPendiente || 0).toLocaleString('es-CO');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; color: #1e293b; }
+        .container { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.06); }
+        .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; padding: 30px 28px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0.5px; }
+        .header p { margin: 8px 0 0; font-size: 14px; opacity: 0.95; }
+        .content { padding: 30px 28px; }
+        .badge-code { background: #fef2f2; border: 2px dashed #ef4444; border-radius: 10px; padding: 14px 20px; text-align: center; margin-bottom: 24px; }
+        .badge-code span { display: block; font-size: 12px; color: #991b1b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .badge-code strong { font-family: monospace; font-size: 26px; color: #dc2626; letter-spacing: 2px; }
+        .notice-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin-bottom: 22px; font-size: 13px; color: #92400e; line-height: 1.5; }
+        .section-title { font-size: 14px; font-weight: 700; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.8px; margin: 20px 0 10px; border-bottom: 2px solid #fee2e2; padding-bottom: 6px; }
+        .table-details { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .table-details td { padding: 9px 8px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; }
+        .table-details td.label { font-weight: 600; color: #64748b; width: 42%; }
+        .table-details td.value { font-weight: 700; color: #0f172a; }
+        .pill-cancelled { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; text-transform: uppercase; }
+        .footer { background: #f8fafc; padding: 20px 28px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>EmiTours</h1>
+          <p>⚠️ Notificación: Una reserva ha sido cancelada por el usuario</p>
+        </div>
+
+        <div class="content">
+          <div class="badge-code">
+            <span>Código de Reserva Cancelada</span>
+            <strong>${codigo}</strong>
+          </div>
+
+          <div class="notice-box">
+            ℹ️ <strong>Información importante:</strong> La cancelación de esta reserva no implica una devolución automática ni reembolso del dinero pagado. Los importes registrados permanecen sin alteraciones financieras en el sistema.
+          </div>
+
+          <div class="section-title">👤 Datos del Usuario</div>
+          <table class="table-details">
+            <tr>
+              <td class="label">Nombre del usuario:</td>
+              <td class="value">${clienteNombre || 'No especificado'}</td>
+            </tr>
+            <tr>
+              <td class="label">Correo electrónico:</td>
+              <td class="value">${clienteCorreo || 'No especificado'}</td>
+            </tr>
+            <tr>
+              <td class="label">Teléfono:</td>
+              <td class="value">${clienteTelefono || 'No especificado'}</td>
+            </tr>
+          </table>
+
+          <div class="section-title">🏔️ Información del Tour</div>
+          <table class="table-details">
+            <tr>
+              <td class="label">Tour / Destino:</td>
+              <td class="value" style="color: #0284c7;">${tourNombre}</td>
+            </tr>
+            <tr>
+              <td class="label">Fecha y hora programada:</td>
+              <td class="value">${fecha} a las ${hora}</td>
+            </tr>
+            <tr>
+              <td class="label">Personas:</td>
+              <td class="value">${numeroPersonas}</td>
+            </tr>
+            <tr>
+              <td class="label">Fecha de cancelación:</td>
+              <td class="value">${fechaCancelacion}</td>
+            </tr>
+            <tr>
+              <td class="label">Estado final:</td>
+              <td class="value"><span class="pill-cancelled">Reserva eliminada</span></td>
+            </tr>
+          </table>
+
+          <div class="section-title">💳 Estado Financiero</div>
+          <table class="table-details">
+            <tr>
+              <td class="label">Precio total del tour:</td>
+              <td class="value">$${totalFmt} COP</td>
+            </tr>
+            <tr>
+              <td class="label">Importe pagado:</td>
+              <td class="value" style="color: #059669;">$${pagadoFmt} COP</td>
+            </tr>
+            <tr>
+              <td class="label">Saldo pendiente:</td>
+              <td class="value" style="color: #b45309;">$${saldoFmt} COP</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p style="margin: 0 0 6px;">Notificación oficial automática de <strong>EmiTours</strong>.</p>
+          <p style="margin: 0; font-size: 11px; color: #94a3b8;">El estado de esta reserva se encuentra visible en el dashboard administrativo como "Reserva eliminada".</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Enviar notificación por correo al Administrador cuando un usuario cancela una reserva
+ */
+async function enviarNotificacionCancelacionReserva(datos) {
+  const destinatarioAdmin = (process.env.ADMIN_NOTIFICATION_EMAIL || '').trim();
+
+  if (!destinatarioAdmin) {
+    console.warn('[Mailer] ⚠️ Advertencia: ADMIN_NOTIFICATION_EMAIL no está configurado en las variables de entorno. Notificación de cancelación omitida.');
+    return { exito: false, error: 'ADMIN_NOTIFICATION_EMAIL no configurado' };
+  }
+
+  const fechaCancelacion = datos.fechaCancelacion || new Date().toLocaleString('es-CO', { dateStyle: 'full', timeStyle: 'short' });
+  const asunto = 'EmiTours - Reserva cancelada por un usuario';
+
+  const datosCompletos = {
+    ...datos,
+    fechaCancelacion
+  };
+
+  const html = generarHtmlNotificacionCancelacion(datosCompletos);
+
+  const texto = [
+    `EmiTours - Reserva cancelada por un usuario`,
+    `----------------------------------------`,
+    `Código de la reserva: ${datos.codigo}`,
+    `Nombre del usuario: ${datos.clienteNombre}`,
+    `Correo electrónico: ${datos.clienteCorreo || 'No especificado'}`,
+    `Teléfono: ${datos.clienteTelefono || 'No especificado'}`,
+    `Tour reservado: ${datos.tourNombre}`,
+    `Fecha y hora: ${datos.fecha} a las ${datos.hora}`,
+    `Número de personas: ${datos.numeroPersonas}`,
+    `Precio total: $${Number(datos.precioTotal || 0).toLocaleString('es-CO')} COP`,
+    `Importe pagado: $${Number(datos.montoPagado || 0).toLocaleString('es-CO')} COP`,
+    `Saldo pendiente: $${Number(datos.saldoPendiente || 0).toLocaleString('es-CO')} COP`,
+    `Fecha de cancelación: ${fechaCancelacion}`,
+    `Estado final: Reserva eliminada`,
+    ``,
+    `Ten en cuenta que esta cancelación no implica una devolución automática ni reembolso del dinero pagado.`
+  ].join('\n');
+
+  try {
+    const resultado = await enviarCorreo({
+      destinatario: destinatarioAdmin,
+      asunto,
+      texto,
+      html
+    });
+
+    if (resultado.exito) {
+      console.log(`[Mailer] ✅ Notificación de cancelación de reserva ${datos.codigo} enviada al administrador (${destinatarioAdmin})`);
+    } else {
+      console.error(`[Mailer] ❌ Error de Resend al notificar cancelación de reserva ${datos.codigo}:`, resultado.error);
+    }
+
+    return resultado;
+  } catch (error) {
+    console.error(`[Mailer] ❌ Excepción al notificar cancelación de reserva ${datos.codigo}:`, error.message);
+    return { exito: false, error: error.message };
+  }
+}
+
 module.exports = {
   getResendClient,
   enviarCorreo,
   enviarNotificacionNuevaReserva,
+  enviarNotificacionCancelacionReserva,
   generarHtmlCodigoVerificacion,
   generarHtmlRecuperacion,
   generarHtmlNotificacionReserva,
-  generarHtmlConfirmacionCliente
+  generarHtmlConfirmacionCliente,
+  generarHtmlNotificacionCancelacion
 };
+

@@ -28,4 +28,25 @@ exports.requireSuperAdmin = (req, res, next) => {
   next();
 };
 
+// Middleware para verificar Token JWT de Usuario o Administrador
+exports.verifyUserOrAdminToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) {
+    return res.status(401).json({ status: 'ERROR', mensaje: 'Acceso denegado. Se requiere iniciar sesión.' });
+  }
+
+  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    if (decoded.rol === 'Super Administrador' || decoded.rol === 'admin') {
+      req.admin = decoded;
+    }
+    next();
+  } catch (err) {
+    return res.status(403).json({ status: 'ERROR', mensaje: 'Sesión expirada o token inválido.' });
+  }
+};
+
 exports.JWT_SECRET = JWT_SECRET;

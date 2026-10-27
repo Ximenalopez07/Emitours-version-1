@@ -922,4 +922,124 @@
   100% { transform: rotate(360deg); }
 }
 
+/* ========================================================
+   MODAL Y BOTÓN DE CANCELACIÓN DE RESERVAS
+   ======================================================== */
+.btn-cancelar-reserva-tabla {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-cancelar-reserva-tabla:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+
+.modal-cancelar-reserva {
+  max-width: 520px;
+  border-top: 4px solid #ef4444;
+}
+
+.alerta-cancelar-caja {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-left: 4px solid #e11d48;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 16px 0;
+  color: #9f1239;
+}
+
+.alerta-cancelar-caja p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.resumen-cancelar-caja {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.resumen-cancelar-caja p {
+  margin: 6px 0;
+  font-size: 0.88rem;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+}
+
+.acciones-cancelar-botones {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.btn-modal-cancelar-volver {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-modal-cancelar-volver:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-modal-cancelar-confirmar {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
+}
+
+.btn-modal-cancelar-confirmar:hover:not(:disabled) {
+  background: #b91c1c;
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
+}
+
+.btn-modal-cancelar-volver:disabled,
+.btn-modal-cancelar-confirmar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .acciones-cancelar-botones {
+    flex-direction: column-reverse;
+  }
+  .btn-modal-cancelar-volver,
+  .btn-modal-cancelar-confirmar {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+
 

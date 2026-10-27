@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { UIContext } from "../context/UIContext";
-import { getLugares, getReservas, createReserva, crearPreferenciaMP, verificarPagoMP } from "../api";
+import { getLugares, getReservas, createReserva, crearPreferenciaMP, verificarPagoMP, cancelarReserva } from "../api";
 import { translations } from "../utils/translations";
 import "./reservas.css";
 
@@ -152,6 +152,46 @@ const Reservas = () => {
   const [cargandoMP, setCargandoMP] = useState(false);
   const [procesandoRetornoMP, setProcesandoRetornoMP] = useState(false);
   const [alertaRetorno, setAlertaRetorno] = useState(null);
+
+  // ESTADOS PARA CANCELACIÓN DE RESERVA POR EL USUARIO
+  const [reservaACancelar, setReservaACancelar] = useState(null);
+  const [cancelandoReserva, setCancelandoReserva] = useState(false);
+  const [alertaCancelacion, setAlertaCancelacion] = useState(null);
+
+  // Función para confirmar la cancelación tras la advertencia del usuario
+  const handleConfirmarCancelacion = async () => {
+    if (!reservaACancelar) return;
+    setCancelandoReserva(true);
+    setAlertaCancelacion(null);
+    try {
+      const res = await cancelarReserva(reservaACancelar.id);
+      if (res.data && res.data.status === "OK") {
+        // Actualización reactiva inmediata en la tabla
+        setMisReservas(prev => prev.map(r => r.id === reservaACancelar.id ? { ...r, estado: 'cancelada' } : r));
+        setAlertaCancelacion({
+          tipo: 'success',
+          mensaje: language === 'en'
+            ? `Booking #${reservaACancelar.codigo || reservaACancelar.id} cancelled successfully. The administrator has been notified.`
+            : `Reserva #${reservaACancelar.codigo || reservaACancelar.id} cancelada exitosamente. El administrador ha sido notificado.`
+        });
+        setReservaACancelar(null);
+        cargarDatos();
+      } else {
+        setAlertaCancelacion({
+          tipo: 'error',
+          mensaje: res.data?.mensaje || (language === 'en' ? 'Could not cancel booking.' : 'No se pudo cancelar la reserva.')
+        });
+      }
+    } catch (err) {
+      console.error("Error al cancelar reserva:", err);
+      setAlertaCancelacion({
+        tipo: 'error',
+        mensaje: err.response?.data?.mensaje || (language === 'en' ? 'Error processing booking cancellation.' : 'Error al procesar la cancelación de la reserva.')
+      });
+    } finally {
+      setCancelandoReserva(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -880,6 +920,7 @@ const Reservas = () => {
                   <th>{t.col_total}</th>
                   <th>{t.col_estado}</th>
                   <th>{t.col_estado_pago}</th>
+                  <th style={{ textAlign: 'center' }}>{language === 'en' ? 'Actions' : 'Acciones'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -926,12 +967,138 @@ const Reservas = () => {
                           {getEstadoPagoLabel(esPagado, r.estado_pago)}
                         </span>
                       </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {(!r.estado || (!r.estado.toLowerCase().includes('cancel') && !r.estado.toLowerCase().includes('realiz'))) ? (
+                          <button
+                            type="button"
+                            className="btn-cancelar-reserva-tabla"
+                            onClick={() => setReservaACancelar(r)}
+                            title={language === 'en' ? 'Cancel this booking' : 'Cancelar esta reserva'}
+                          >
+                            {language === 'en' ? 'Cancel booking' : 'Cancelar reserva'}
+                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '12.5px', fontWeight: '600' }}>—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+      {/* MODAL ADVERTENCIA Y CONFIRMACIÓN DE CANCELACIÓN DE RESERVA */}
+      {reservaACancelar && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-reserva" style={{ maxWidth: '520px', padding: '30px 24px', textAlign: 'center' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: '#fee2e2',
+              color: '#dc2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '26px',
+              margin: '0 auto 16px auto'
+            }}>
+              ⚠️
+            </div>
+
+            <h3 style={{ color: '#0f172a', fontSize: '1.25rem', fontWeight: '800', margin: '0 0 12px 0' }}>
+              {language === 'en'
+                ? 'Are you sure you want to cancel this booking?'
+                : '¿Estás seguro de que deseas cancelar esta reserva?'}
+            </h3>
+
+            <p style={{ color: '#475569', fontSize: '0.92rem', lineHeight: '1.6', margin: '0 0 18px 0', textAlign: 'justify' }}>
+              {language === 'en'
+                ? 'Please note that once the booking is cancelled, no refund of the money paid will be made. If you continue, the booking will be marked as cancelled and the administrator will be able to review its status.'
+                : 'Ten en cuenta que, una vez cancelada la reserva, no se realizará ninguna devolución del dinero pagado. Si continúas, la reserva quedará marcada como cancelada y el administrador podrá consultar su estado.'}
+            </p>
+
+            {/* Resumen de la reserva */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              marginBottom: '22px',
+              fontSize: '13px',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>{language === 'en' ? 'Booking Code:' : 'Código:'}</span>
+                <strong style={{ color: '#0284c7', fontFamily: 'monospace' }}>{reservaACancelar.codigo || `RES-${reservaACancelar.id}`}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>{language === 'en' ? 'Tour:' : 'Tour:'}</span>
+                <strong>{reservaACancelar.lugar_nombre || 'Tour EmiTours'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>{language === 'en' ? 'Date & Time:' : 'Fecha y hora:'}</span>
+                <span>{reservaACancelar.fecha ? String(reservaACancelar.fecha).substring(0, 10) : ''} - {reservaACancelar.hora}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                className="btn-modal-cancelar-volver"
+                onClick={() => setReservaACancelar(null)}
+                disabled={cancelandoReserva}
+              >
+                {language === 'en' ? 'Back' : 'Volver'}
+              </button>
+              <button
+                type="button"
+                className="btn-modal-cancelar-confirmar"
+                onClick={handleConfirmarCancelacion}
+                disabled={cancelandoReserva}
+              >
+                {cancelandoReserva
+                  ? (language === 'en' ? 'Cancelling...' : 'Cancelando...')
+                  : (language === 'en' ? 'Yes, cancel booking' : 'Sí, cancelar reserva')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ALERTA DE CANCELACIÓN */}
+      {alertaCancelacion && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9999,
+          background: alertaCancelacion.tipo === 'success' ? '#ecfdf5' : '#fef2f2',
+          border: `1.5px solid ${alertaCancelacion.tipo === 'success' ? '#10b981' : '#ef4444'}`,
+          borderRadius: '12px',
+          padding: '14px 20px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          maxWidth: '420px'
+        }}>
+          <span style={{ fontSize: '20px' }}>{alertaCancelacion.tipo === 'success' ? '✅' : '❌'}</span>
+          <span style={{ fontSize: '13.5px', color: alertaCancelacion.tipo === 'success' ? '#065f46' : '#991b1b', fontWeight: '600' }}>
+            {alertaCancelacion.mensaje}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAlertaCancelacion(null)}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', marginLeft: 'auto' }}
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>

@@ -254,7 +254,7 @@ export default function AdminReservas() {
         'Saldo Pendiente': `$${pendiente.toLocaleString()} COP`,
         'Método de Pago': r.metodo_pago || 'N/A',
         'Estado del Pago': esPagado ? 'Pagado (100%)' : (r.estado_pago === 'parcial' ? 'Parcial (50%)' : 'Pendiente'),
-        'Estado de Reserva': (r.estado || 'Pendiente').toUpperCase()
+        'Estado de Reserva': (r.estado || '').toLowerCase().includes('cancel') ? 'RESERVA ELIMINADA' : (r.estado || 'Pendiente').toUpperCase()
       };
     });
     const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -290,7 +290,7 @@ export default function AdminReservas() {
         (r.idioma || 'es').toLowerCase() === 'en' ? 'Inglés' : 'Español',
         `$${tot.toLocaleString()} COP`,
         esPagado ? 'Pagado (100%)' : (r.estado_pago === 'parcial' ? `Parcial (Resta: $${pendiente.toLocaleString()})` : 'Pendiente'),
-        (r.estado || 'Pendiente').toUpperCase()
+        (r.estado || '').toLowerCase().includes('cancel') ? 'RESERVA ELIMINADA' : (r.estado || 'Pendiente').toUpperCase()
       ];
     });
 
@@ -376,7 +376,7 @@ export default function AdminReservas() {
             <option value="pendiente">⏳ Pendiente</option>
             <option value="confirmada">✅ Confirmada</option>
             <option value="realizada">🏁 Realizada</option>
-            <option value="cancelada">❌ Cancelada</option>
+            <option value="cancelada">❌ Reserva eliminada</option>
           </select>
         </div>
 
@@ -634,7 +634,7 @@ export default function AdminReservas() {
                         >
                           <option value="pendiente">Pendiente</option>
                           <option value="confirmada">Confirmada</option>
-                          <option value="cancelada">Cancelada</option>
+                          <option value="cancelada">Reserva eliminada</option>
                           <option value="realizada">Realizada</option>
                         </select>
                       </td>
@@ -725,7 +725,7 @@ export default function AdminReservas() {
                 backgroundColor: (selectedReservaDetail.estado || '').toLowerCase().includes('realiz') ? '#ede9fe' : (selectedReservaDetail.estado || '').toLowerCase().includes('confir') ? '#dcfce7' : (selectedReservaDetail.estado || '').toLowerCase().includes('cancel') ? '#fee2e2' : '#fef3c7',
                 color: (selectedReservaDetail.estado || '').toLowerCase().includes('realiz') ? '#6d28d9' : (selectedReservaDetail.estado || '').toLowerCase().includes('confir') ? '#15803d' : (selectedReservaDetail.estado || '').toLowerCase().includes('cancel') ? '#b91c1c' : '#92400e'
               }}>
-                {(selectedReservaDetail.estado || 'Pendiente').toUpperCase()}
+                {(selectedReservaDetail.estado || '').toLowerCase().includes('cancel') ? 'RESERVA ELIMINADA' : (selectedReservaDetail.estado || 'Pendiente').toUpperCase()}
               </span>
             </div>
 
@@ -915,7 +915,7 @@ export default function AdminReservas() {
                   <option value="pendiente">⏳ Pendiente</option>
                   <option value="confirmada">✅ Confirmada</option>
                   <option value="realizada">🏁 Realizada</option>
-                  <option value="cancelada">❌ Cancelada</option>
+                  <option value="cancelada">❌ Reserva eliminada</option>
                 </select>
               </div>
 

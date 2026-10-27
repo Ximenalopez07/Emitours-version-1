@@ -1,5 +1,5 @@
 const db = require('../config/db');
-const { enviarNotificacionNuevaReserva } = require('../utils/mailer');
+const { enviarNotificacionNuevaReserva, enviarNotificacionCancelacionReserva } = require('../utils/mailer');
 
 // Helper para convertir hora a formato TIME 'HH:MM:SS'
 function formatTimeToSql(hStr) {
@@ -424,4 +424,125 @@ exports.delete = (req, res) => {
     if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
     res.json({ status: 'OK', mensaje: "Reserva eliminada exitosamente." });
   });
+};
+
+// ==========================================
+// CANCELAR RESERVA POR EL USUARIO AUTENTICADO
+// ==========================================
+exports.cancelarReserva = async (req, res) => {
+  const { id } = req.params;
+  const usuarioAutenticadoId = req.user?.id || req.user?.id_registro;
+  const esAdmin = req.user?.rol === 'Super Administrador' || req.user?.rol === 'admin' || Boolean(req.admin);
+
+  if (!id) {
+    return res.status(400).json({ status: 'ERROR', mensaje: 'ID de reserva no proporcionado.' });
+  }
+
+  try {
+    // 1. Consultar la reserva existente con datos de usuario y lugar
+    const [rows] = await db.promise().query(`
+      SELECT 
+        r.*,
+        u.nombre_usuario,
+        u.correo_electronico,
+        u.telefono,
+        l.nombre as lugar_nombre
+      FROM reservas r
+      LEFT JOIN registro_usuarios u ON r.usuario_id = u.id_registro
+      LEFT JOIN lugares l ON r.lugar_id = l.id
+      WHERE r.id = ?
+    `, [id]);
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ status: 'ERROR', mensaje: 'Reserva no encontrada.' });
+    }
+
+    const reserva = rows[0];
+
+    // 2. Verificar que la reserva pertenezca al usuario autenticado (a menos que sea administrador)
+    if (!esAdmin && String(reserva.usuario_id) !== String(usuarioAutenticadoId)) {
+      return res.status(403).json({
+        status: 'ERROR',
+        mensaje: 'No tienes autorización para cancelar una reserva que no te pertenece.'
+      });
+    }
+
+    // 3. Validar si ya está cancelada
+    const estadoActual = String(reserva.estado || '').toLowerCase();
+    if (estadoActual.includes('cancel')) {
+      return res.status(400).json({
+        status: 'ERROR',
+        mensaje: 'Esta reserva ya se encuentra cancelada en el sistema.'
+      });
+    }
+
+    // 4. Validar si ya fue realizada
+    if (estadoActual.includes('realiz')) {
+      return res.status(400).json({
+        status: 'ERROR',
+        mensaje: 'No es posible cancelar una reserva que ya ha sido realizada.'
+      });
+    }
+
+    // 5. Actualizar el estado a 'cancelada' en MySQL sin alterar datos financieros ni borrar registro
+    await db.promise().query(
+      "UPDATE reservas SET estado = 'cancelada' WHERE id = ?",
+      [id]
+    );
+
+    console.log(`[Reserva Controller] ✅ Reserva #${reserva.codigo || id} cancelada exitosamente en MySQL por usuario ID ${usuarioAutenticadoId}.`);
+
+    // 6. Notificación interna en base de datos
+    db.query(
+      "INSERT INTO notificaciones (tipo, mensaje) VALUES ('Cancelacion', ?)",
+      [`El usuario ${reserva.nombre_usuario || 'Cliente'} canceló la reserva ${reserva.codigo || id} para el tour ${reserva.lugar_nombre || 'EmiTours'}. Estado: Reserva eliminada.`],
+      () => {}
+    );
+
+    // 7. Enviar notificación por correo al Administrador vía Resend (asíncrono, no bloqueante)
+    const totalCalc = Number(reserva.precio_total || 0);
+    const pagadoCalc = (reserva.monto_pagado !== undefined && Number(reserva.monto_pagado) > 0)
+      ? Number(reserva.monto_pagado)
+      : (String(reserva.estado_pago || '').toLowerCase().includes('pagad') ? totalCalc : Math.round(totalCalc * 0.5));
+    const saldoCalc = Math.max(0, totalCalc - pagadoCalc);
+
+    const fechaCancelacionStr = new Date().toLocaleString('es-CO', { dateStyle: 'full', timeStyle: 'short' });
+
+    let envioCorreoExitoso = false;
+    try {
+      const resMail = await enviarNotificacionCancelacionReserva({
+        codigo: reserva.codigo || `RES-${id}`,
+        clienteNombre: reserva.nombre_usuario || 'Cliente EmiTours',
+        clienteCorreo: reserva.correo_electronico || 'No especificado',
+        clienteTelefono: reserva.telefono || 'No especificado',
+        tourNombre: reserva.lugar_nombre || 'Tour EmiTours',
+        fecha: reserva.fecha ? (reserva.fecha instanceof Date ? reserva.fecha.toISOString().split('T')[0] : String(reserva.fecha).substring(0, 10)) : 'N/A',
+        hora: reserva.hora ? String(reserva.hora).substring(0, 5) : '08:00 AM',
+        numeroPersonas: reserva.numero_personas || 1,
+        precioTotal: totalCalc,
+        montoPagado: pagadoCalc,
+        saldoPendiente: saldoCalc,
+        fechaCancelacion: fechaCancelacionStr
+      });
+      envioCorreoExitoso = Boolean(resMail?.exito);
+    } catch (errMail) {
+      console.error(`[Reserva Controller] ❌ Error no bloqueante al enviar correo de cancelación de reserva ${reserva.codigo || id}:`, errMail.message);
+    }
+
+    // 8. Responder con éxito
+    return res.json({
+      status: 'OK',
+      mensaje: 'Reserva cancelada exitosamente. Ten presente que la cancelación no genera devolución del dinero pagado.',
+      reservaId: id,
+      estado: 'cancelada',
+      notificacionAdminEnviada: envioCorreoExitoso
+    });
+
+  } catch (err) {
+    console.error(`[Reserva Controller] ❌ Error al procesar cancelación de reserva #${id}:`, err);
+    return res.status(500).json({
+      status: 'ERROR',
+      mensaje: 'Ocurrió un error interno al intentar cancelar la reserva. Por favor intenta más tarde.'
+    });
+  }
 };

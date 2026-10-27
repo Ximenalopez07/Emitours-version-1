@@ -17,6 +17,7 @@ export const getReservas = (params) => api.get('/reservas', { params });
 export const createReserva = (reservaData) => api.post('/reservas', reservaData);
 export const updateReserva = (id, reservaData) => api.put(`/reservas/${id}`, reservaData);
 export const deleteReserva = (id) => api.delete(`/reservas/${id}`);
+export const cancelarReserva = (id) => api.put(`/reservas/${id}/cancelar`);
 
 export const enviarContacto = (contactoData) => api.post('/contacto', contactoData);
 export const getAdminContacto = () => api.get('/contacto/admin');
