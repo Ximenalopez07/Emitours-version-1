@@ -1,114 +1,90 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 require('dotenv').config();
 
-let cachedTransporter = null;
+let cachedResend = null;
 
 /**
- * Obtener o inicializar el transporte SMTP configurado en .env
+ * Obtener o inicializar el cliente oficial de Resend (HTTPS)
  */
-async function getTransporter() {
-  if (cachedTransporter) return cachedTransporter;
+function getResendClient() {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) return null;
 
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  // 1. Configuración SMTP estándar especificada en .env
-  if (host && user && pass) {
-    const port = parseInt(process.env.SMTP_PORT || '587', 10);
-    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-
-    cachedTransporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: {
-        user,
-        pass
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-
-    return cachedTransporter;
+  if (!cachedResend) {
+    const prefijo = apiKey.substring(0, Math.min(6, apiKey.length));
+    const sufijo = apiKey.length > 4 ? apiKey.slice(-4) : '';
+    console.log(`[Resend] Inicializando cliente HTTPS oficial (API Key: ${prefijo}...${sufijo})`);
+    cachedResend = new Resend(apiKey);
   }
-
-  // 2. Compatibilidad si se definieron variables legacy EMAIL_USER y EMAIL_PASS
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    cachedTransporter = nodemailer.createTransport({
-      service: process.env.EMAIL_SERVICE || 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-    return cachedTransporter;
-  }
-
-  // 3. Fallback de desarrollo con cuenta de prueba Ethereal si no hay credenciales en .env
-  try {
-    const testAccount = await nodemailer.createTestAccount();
-    cachedTransporter = nodemailer.createTransport({
-      host: testAccount.smtp.host,
-      port: testAccount.smtp.port,
-      secure: testAccount.smtp.secure,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass
-      }
-    });
-    console.log('[Mailer] Modo de prueba activo (Ethereal test account)');
-    return cachedTransporter;
-  } catch (err) {
-    console.error('[Mailer] No se pudo inicializar transporte de correo:', err.message);
-    throw new Error('Servicio de correo no disponible.');
-  }
+  return cachedResend;
 }
 
 /**
- * Verificar conectividad con el servidor SMTP
+ * Determinar el remitente válido para Resend
+ * Resend requiere un dominio propio verificado o 'onboarding@resend.dev'.
+ * Si se especifica un dominio público (@gmail.com, etc.), se utiliza automáticamente 'onboarding@resend.dev'.
  */
-async function verificarConexionSMTP() {
-  try {
-    const mailer = await getTransporter();
-    await mailer.verify();
-    return { ok: true, mensaje: 'Conexión SMTP verificada exitosamente.' };
-  } catch (error) {
-    return { ok: false, mensaje: error.message };
+function getRemitenteResend() {
+  const envFrom = (process.env.EMAIL_FROM || '').trim();
+  if (!envFrom) {
+    return 'EmiTours <onboarding@resend.dev>';
   }
+
+  // Si se configuró un proveedor gratuito no verificable en Resend, usar onboarding@resend.dev
+  const esDominioPublico = /@(gmail|hotmail|yahoo|outlook)\.com/i.test(envFrom);
+  if (esDominioPublico) {
+    console.warn(`[Resend] ⚠️ ADVERTENCIA: '${envFrom}' utiliza un dominio público no verificable en Resend. Para garantizar la entrega por HTTPS, se enviará como 'EmiTours <onboarding@resend.dev>'. Configura tu dominio propio en https://resend.com/domains.`);
+    return 'EmiTours <onboarding@resend.dev>';
+  }
+
+  return envFrom;
 }
 
 /**
- * Enviar correo genérico
+ * Enviar correo genérico mediante la API HTTPS de Resend
  */
 async function enviarCorreo({ destinatario, asunto, texto, html }) {
-  try {
-    const mailer = await getTransporter();
-    const remitente = process.env.EMAIL_FROM || process.env.SMTP_USER || process.env.EMAIL_USER || '"EmiTours" <no-reply@emitours.com>';
+  if (!destinatario) {
+    console.error('[Mailer] ❌ Error: Destinatario no especificado.');
+    return { exito: false, error: 'Destinatario no especificado' };
+  }
 
-    const info = await mailer.sendMail({
+  const resend = getResendClient();
+  if (!resend) {
+    const msgError = 'RESEND_API_KEY no está configurada en las variables de entorno (.env).';
+    console.warn(`[Mailer] ⚠️ Envío omitido hacia ${destinatario}: ${msgError}`);
+    return { exito: false, error: msgError };
+  }
+
+  try {
+    const remitente = getRemitenteResend();
+    const payload = {
       from: remitente,
       to: destinatario,
       subject: asunto,
-      text: texto,
-      html: html || `<p>${texto}</p>`
-    });
+      html: html || `<p>${texto || ''}</p>`
+    };
+    if (texto) payload.text = texto;
 
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`[Mailer Correo Enviado] Vista previa: ${previewUrl}`);
+    const respuesta = await resend.emails.send(payload);
+
+    // Manejo estricto de errores devueltos por la API de Resend
+    if (respuesta.error) {
+      console.error(`[Resend] ❌ Error de la API al enviar correo a ${destinatario}:`, respuesta.error.message || respuesta.error);
+      return { exito: false, error: respuesta.error.message || 'Error en Resend API' };
     }
 
-    return { exito: true, messageId: info.messageId, previewUrl };
+    const messageId = respuesta.data?.id || 'resend-ok';
+    console.log(`[Resend] ✅ Correo enviado exitosamente a ${destinatario} (ID: ${messageId})`);
+    return { exito: true, messageId };
   } catch (error) {
-    console.error(`[Mailer] Error enviando correo a ${destinatario}:`, error.message);
+    console.error(`[Resend] ❌ Excepción al conectar con la API de Resend para ${destinatario}:`, error.message);
     return { exito: false, error: error.message };
   }
 }
 
 /**
- * Plantilla HTML profesional para notificación de nueva reserva
+ * Plantilla HTML profesional para notificación de nueva reserva (Administrador)
  */
 function generarHtmlNotificacionReserva(datos) {
   const {
@@ -159,21 +135,17 @@ function generarHtmlNotificacionReserva(datos) {
     </head>
     <body>
       <div class="container">
-        <!-- ENCABEZADO -->
         <div class="header">
           <h1>EmiTours</h1>
           <p>🔔 ¡Nueva reserva recibida en el sistema!</p>
         </div>
 
-        <!-- CUERPO -->
         <div class="content">
-          <!-- CÓDIGO DESTACADO -->
           <div class="badge-code">
             <span>Código de la Reserva</span>
             <strong>${codigo}</strong>
           </div>
 
-          <!-- DETALLES DEL CLIENTE -->
           <div class="section-title">👤 Datos del Cliente</div>
           <table class="table-details">
             <tr>
@@ -190,7 +162,6 @@ function generarHtmlNotificacionReserva(datos) {
             </tr>
           </table>
 
-          <!-- DETALLES DEL TOUR -->
           <div class="section-title">🏔️ Información del Tour</div>
           <table class="table-details">
             <tr>
@@ -215,7 +186,6 @@ function generarHtmlNotificacionReserva(datos) {
             </tr>
           </table>
 
-          <!-- DETALLES DEL PAGO -->
           <div class="section-title">💳 Detalles del Pago</div>
           <table class="table-details">
             <tr>
@@ -237,7 +207,6 @@ function generarHtmlNotificacionReserva(datos) {
           </table>
         </div>
 
-        <!-- FOOTER -->
         <div class="footer">
           <p style="margin: 0 0 6px;">Notificación automática generada por <strong>EmiTours</strong> el ${fechaActual}.</p>
           <p style="margin: 0; font-size: 11px; color: #94a3b8;">Por favor gestiona esta reserva en el panel de administración oficial.</p>
@@ -249,22 +218,117 @@ function generarHtmlNotificacionReserva(datos) {
 }
 
 /**
- * Enviar notificación al administrador cuando se crea una nueva reserva
+ * Plantilla HTML para confirmación de reserva enviada al cliente
+ */
+function generarHtmlConfirmacionCliente(datos) {
+  const {
+    codigo,
+    clienteNombre,
+    tourNombre,
+    fecha,
+    hora,
+    numeroPersonas,
+    idioma,
+    precioTotal,
+    metodoPago,
+    estadoPago
+  } = datos;
+
+  const precioFormateado = Number(precioTotal || 0).toLocaleString('es-CO');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
+        .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .banner { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; padding: 32px 24px; text-align: center; }
+        .banner h1 { margin: 0; font-size: 24px; font-weight: 800; }
+        .banner p { margin: 8px 0 0; opacity: 0.95; font-size: 14px; }
+        .body-content { padding: 28px 24px; }
+        .code-box { background: #f0f9ff; border: 2px dashed #0284c7; border-radius: 12px; padding: 16px; text-align: center; margin: 18px 0; }
+        .code-box span { font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .code-box strong { font-family: monospace; font-size: 24px; color: #0284c7; letter-spacing: 2px; }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .info-label { color: #64748b; font-weight: 600; }
+        .info-val { color: #0f172a; font-weight: 700; text-align: right; }
+        .footer { background: #f1f5f9; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748b; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="banner">
+          <h1>¡Reserva Confirmada!</h1>
+          <p>Tu aventura con EmiTours está lista</p>
+        </div>
+        <div class="body-content">
+          <p style="font-size: 15px; margin: 0 0 12px 0;">¡Hola <strong>${clienteNombre || 'Viajero'}</strong>!</p>
+          <p style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0 0 16px 0;">
+            Hemos registrado exitosamente tu reserva. A continuación encontrarás el resumen de tu experiencia:
+          </p>
+
+          <div class="code-box">
+            <span>Tu Código de Reserva</span>
+            <strong>${codigo}</strong>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+              <td style="padding: 9px 0; color: #64748b; font-weight: 600; font-size: 14px;">Tour:</td>
+              <td style="padding: 9px 0; font-weight: 700; color: #0284c7; font-size: 14px; text-align: right;">${tourNombre}</td>
+            </tr>
+            <tr>
+              <td style="padding: 9px 0; color: #64748b; font-weight: 600; font-size: 14px;">Fecha:</td>
+              <td style="padding: 9px 0; font-weight: 700; color: #0f172a; font-size: 14px; text-align: right;">${fecha} a las ${hora}</td>
+            </tr>
+            <tr>
+              <td style="padding: 9px 0; color: #64748b; font-weight: 600; font-size: 14px;">Personas:</td>
+              <td style="padding: 9px 0; font-weight: 700; color: #0f172a; font-size: 14px; text-align: right;">${numeroPersonas}</td>
+            </tr>
+            <tr>
+              <td style="padding: 9px 0; color: #64748b; font-weight: 600; font-size: 14px;">Idioma:</td>
+              <td style="padding: 9px 0; font-weight: 700; color: #0f172a; font-size: 14px; text-align: right;">${idioma}</td>
+            </tr>
+            <tr>
+              <td style="padding: 9px 0; color: #64748b; font-weight: 600; font-size: 14px;">Método de Pago:</td>
+              <td style="padding: 9px 0; font-weight: 700; color: #0f172a; font-size: 14px; text-align: right;">${metodoPago}</td>
+            </tr>
+            <tr>
+              <td style="padding: 9px 0; color: #64748b; font-weight: 600; font-size: 14px;">Total:</td>
+              <td style="padding: 9px 0; font-weight: 800; color: #0284c7; font-size: 16px; text-align: right;">$${precioFormateado} COP</td>
+            </tr>
+          </table>
+
+          <div style="margin-top: 22px; padding: 12px 16px; background: #ecfdf5; border-radius: 8px; border: 1px solid #a7f3d0; font-size: 13px; color: #065f46;">
+            ✓ Presenta tu código <strong>${codigo}</strong> al momento del encuentro con tu guía.
+          </div>
+        </div>
+        <div class="footer">
+          © ${new Date().getFullYear()} EmiTours Medellín. Todos los derechos reservados.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Enviar notificación de nueva reserva al Administrador y opcionalmente copia al cliente
  */
 async function enviarNotificacionNuevaReserva(datos) {
-  const destinatario = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_USER;
+  const destinatarioAdmin = (process.env.ADMIN_NOTIFICATION_EMAIL || '').trim();
 
-  if (!destinatario) {
-    console.warn('[Mailer] Advertencia: ADMIN_NOTIFICATION_EMAIL o SMTP_USER no están configurados en el archivo .env. Notificación de reserva omitida.');
-    return { exito: false, error: 'ADMIN_NOTIFICATION_EMAIL no configurado en .env' };
+  if (!destinatarioAdmin) {
+    console.warn('[Mailer] ⚠️ Advertencia: ADMIN_NOTIFICATION_EMAIL no está configurado en las variables de entorno. Notificación de reserva omitida.');
+    return { exito: false, error: 'ADMIN_NOTIFICATION_EMAIL no configurado' };
   }
 
-  const asunto = 'Nueva reserva recibida - EmiTours.';
-  const remitente = process.env.EMAIL_FROM || process.env.SMTP_USER || '"EmiTours Reservas" <no-reply@emitours.com>';
+  const asunto = `Nueva reserva recibida - EmiTours. [${datos.codigo}]`;
+  const htmlAdmin = generarHtmlNotificacionReserva(datos);
 
-  const html = generarHtmlNotificacionReserva(datos);
-
-  const texto = [
+  const textoAdmin = [
     `Nueva reserva recibida - EmiTours.`,
     `----------------------------------------`,
     `Código de la reserva: ${datos.codigo}`,
@@ -282,32 +346,49 @@ async function enviarNotificacionNuevaReserva(datos) {
     `Estado del pago: ${datos.estadoPago || 'Pendiente'}`
   ].join('\n');
 
-  try {
-    const mailer = await getTransporter();
-    const info = await mailer.sendMail({
-      from: remitente,
-      to: destinatario,
-      subject: asunto,
-      text: texto,
-      html
-    });
+  // 1. Enviar notificación al Administrador
+  const resultadoAdmin = await enviarCorreo({
+    destinatario: destinatarioAdmin,
+    asunto,
+    texto: textoAdmin,
+    html: htmlAdmin
+  });
 
-    console.log(`[Mailer] ✅ Notificación de reserva ${datos.codigo} enviada exitosamente a ${destinatario} (ID: ${info.messageId})`);
-
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`[Mailer] Vista previa de correo (Ethereal): ${previewUrl}`);
-    }
-
-    return { exito: true, messageId: info.messageId, previewUrl };
-  } catch (error) {
-    console.error(`[Mailer] ❌ Error enviando notificación de reserva ${datos.codigo} a ${destinatario}:`, error.message);
-    return { exito: false, error: error.message };
+  if (resultadoAdmin.exito) {
+    console.log(`[Mailer] ✅ Notificación de reserva ${datos.codigo} entregada a administrador (${destinatarioAdmin})`);
+  } else {
+    console.error(`[Mailer] ❌ Falló el envío de notificación de reserva ${datos.codigo} al administrador:`, resultadoAdmin.error);
   }
+
+  // 2. Enviar confirmación al cliente si tiene correo válido (aislado y no bloqueante)
+  const correoCliente = (datos.clienteCorreo || '').trim();
+  const tieneCorreoValido = correoCliente.includes('@') && correoCliente.toLowerCase() !== 'no especificado' && correoCliente.toLowerCase() !== destinatarioAdmin.toLowerCase();
+
+  if (tieneCorreoValido) {
+    try {
+      const htmlCliente = generarHtmlConfirmacionCliente(datos);
+      const resCliente = await enviarCorreo({
+        destinatario: correoCliente,
+        asunto: `Confirmación de tu reserva ${datos.codigo} - EmiTours`,
+        texto: `¡Hola ${datos.clienteNombre}!\nTu reserva para "${datos.tourNombre}" ha sido registrada con el código ${datos.codigo}.\nFecha: ${datos.fecha} a las ${datos.hora}.\nTotal: $${Number(datos.precioTotal || 0).toLocaleString('es-CO')} COP.\n¡Gracias por elegir EmiTours!`,
+        html: htmlCliente
+      });
+
+      if (resCliente.exito) {
+        console.log(`[Mailer] ✅ Confirmación de reserva ${datos.codigo} enviada al cliente (${correoCliente})`);
+      } else {
+        console.warn(`[Mailer] ℹ️ No se pudo entregar copia al cliente (${correoCliente}): ${resCliente.error}`);
+      }
+    } catch (errCli) {
+      console.warn(`[Mailer] ℹ️ Error secundario enviando confirmación al cliente:`, errCli.message);
+    }
+  }
+
+  return resultadoAdmin;
 }
 
 /**
- * Plantilla HTML para el código de verificación
+ * Plantilla HTML para código de verificación
  */
 function generarHtmlCodigoVerificacion(nombre, codigo) {
   return `
@@ -371,11 +452,11 @@ function generarHtmlRecuperacion(nombre, codigo) {
 }
 
 module.exports = {
-  getTransporter,
-  verificarConexionSMTP,
+  getResendClient,
   enviarCorreo,
   enviarNotificacionNuevaReserva,
   generarHtmlCodigoVerificacion,
   generarHtmlRecuperacion,
-  generarHtmlNotificacionReserva
+  generarHtmlNotificacionReserva,
+  generarHtmlConfirmacionCliente
 };

@@ -124,7 +124,7 @@ exports.crearPreferencia = async (req, res) => {
     const cliente = resUser && resUser.length > 0 ? resUser[0] : null;
 
     // Identificar correos del administrador / vendedor para evitar conflicto de auto-pago (error /fatal/)
-    const emailAdmin = (process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_USER || '').toLowerCase().trim();
+    const emailAdmin = (process.env.ADMIN_NOTIFICATION_EMAIL || '').toLowerCase().trim();
     const emailCliente = (cliente?.correo_electronico || req.body.email || '').toLowerCase().trim();
     const esMismoVendedor = emailAdmin && emailCliente && (emailAdmin === emailCliente);
 
