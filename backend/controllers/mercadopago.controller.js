@@ -150,12 +150,9 @@ exports.crearPreferencia = async (req, res) => {
     const client = getMercadoPagoClient();
     const preference = new Preference(client);
 
-    // Obtener la URL base del frontend desde .env, headers o valor por defecto
+    // URL de retorno hacia EmiTours (reservas)
     const frontendBaseUrl = (process.env.FRONTEND_URL || req.headers.origin || 'http://localhost:5173').replace(/\/+$/, '');
     const returnUrl = `${frontendBaseUrl}/reservas`;
-
-    // Mercado Pago exige que para usar auto_return: 'approved', la URL sea HTTPS pública (no localhost)
-    const isPublicHttps = returnUrl.startsWith('https://') && !returnUrl.includes('localhost') && !returnUrl.includes('127.0.0.1');
 
     // Webhook URL: Solo se incluye si es una URL HTTPS pública absoluta y válida
     let webhookUrl = null;
@@ -178,13 +175,15 @@ exports.crearPreferencia = async (req, res) => {
         }
       ],
       ...(payerObj ? { payer: payerObj } : {}),
-      // back_urls debe incluirse SIEMPRE para que el botón "Volver al comercio" redirija al frontend
+      // back_urls debe incluirse SIEMPRE para que el botón "Volver a la tienda" / "Volver al sitio" esté disponible
       back_urls: {
         success: returnUrl,
         failure: returnUrl,
         pending: returnUrl
       },
-      ...(isPublicHttps ? { auto_return: 'approved' } : {}),
+      // NOTA: Se omite intencionalmente 'auto_return' para eliminar el temporizador ("En X segundos te llevaremos a...")
+      // y el indicador circular de la pantalla de confirmación de Mercado Pago. El usuario puede ver su comprobante
+      // con calma y decidir cuándo regresar a EmiTours mediante el enlace "Volver a la tienda".
       ...(webhookUrl ? { notification_url: webhookUrl } : {}),
       // Configuración de métodos de pago para demostración académica:
       // Se excluyen transferencias bancarias (PSE) para evitar fallos del simulador bancario y mantener el flujo enfocado en Tarjetas y Efectivo
