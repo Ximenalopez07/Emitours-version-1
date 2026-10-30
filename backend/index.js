@@ -21,6 +21,7 @@ const adminRoutes = require('./routes/admin.routes');
 const contactoRoutes = require('./routes/contacto.routes');
 const chatbotRoutes = require('./routes/chatbot.routes');
 const mercadopagoRoutes = require('./routes/mercadopago.routes');
+const { iniciarCronReservas } = require('./services/reservaEstadoService');
 
 // ================= USAR RUTAS =================
 
@@ -44,4 +45,6 @@ app.get('/', (req, res) => {
 
 app.listen(3000, () => {
   console.log('Servidor corriendo en puerto 3000');
+  // Proceso automático periódico para actualizar reservas a 'realizada' según horario de Colombia
+  iniciarCronReservas();
 });

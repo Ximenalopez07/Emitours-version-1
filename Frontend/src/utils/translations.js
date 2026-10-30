@@ -176,15 +176,12 @@ export const translations = {
     estado_pago_pendiente: "Pendiente",
 
     // Métodos de Pago
-    metodo_nequi: "Nequi",
-    metodo_pse: "PSE",
-    metodo_efectivo: "Efectivo",
-    metodo_datafono: "Datáfono",
+    mercadopago: "Mercado Pago",
 
     // Error Límite 20 Reservas
     error_limite_20: "Lo sentimos, este lugar ya alcanzó el límite de 20 reservas para esta fecha. Por favor selecciona otra fecha o lugar.",
     error_horario_invalido: "El horario disponible para realizar reservas es de 7:00 AM a 7:00 PM.",
-    error_metodo_pago_invalido: "Método de pago no válido. Selecciona Nequi, PSE, Pago en efectivo o Datáfono.",
+    error_metodo_pago_invalido: "Método de pago no válido.",
 
     // Chatbot IA (Menú Enumerado)
     asistente_titulo: "Asistente EmiTours",

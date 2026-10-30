@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { UIContext } from "../context/UIContext";
 import { getLugares, getReservas, createReserva, crearPreferenciaMP, verificarPagoMP, cancelarReserva } from "../api";
+import { validarConflictoReserva } from "../utils/validacionesReserva";
 import { translations } from "../utils/translations";
 import "./reservas.css";
 
@@ -157,6 +158,9 @@ const Reservas = () => {
   const [reservaACancelar, setReservaACancelar] = useState(null);
   const [cancelandoReserva, setCancelandoReserva] = useState(false);
   const [alertaCancelacion, setAlertaCancelacion] = useState(null);
+
+  // ESTADO PARA ADVERTENCIA DE CONFLICTO DE HORARIO O REGLA DE GUATAPÉ
+  const [alertaConflicto, setAlertaConflicto] = useState(null);
 
   // Función para confirmar la cancelación tras la advertencia del usuario
   const handleConfirmarCancelacion = async () => {
@@ -437,6 +441,20 @@ const Reservas = () => {
       return;
     }
 
+    // VALIDACIÓN PREVENTIVA DE CONFLICTO DE HORARIOS Y REGLA DE GUATAPÉ EN FRONTEND
+    const validacion = validarConflictoReserva({
+      lugarId: selectedTour.id,
+      lugarNombre: selectedTour.nombre || selectedTour.title,
+      fecha: fechaTour,
+      hora: horaTour || "07:00 AM",
+      reservasExistentes: misReservas
+    });
+
+    if (validacion.hayConflicto) {
+      setAlertaConflicto(validacion);
+      return;
+    }
+
     setCargandoMP(true);
 
     try {
@@ -490,6 +508,18 @@ const Reservas = () => {
       }
     } catch (err) {
       console.error("Error al iniciar checkout Mercado Pago:", err);
+      // Si el servidor detectó conflicto de reservas
+      if (err.response?.status === 409 && err.response?.data?.status === 'CONFLICTO_RESERVA') {
+        setAlertaConflicto({
+          hayConflicto: true,
+          titulo: err.response.data.titulo,
+          mensaje: err.response.data.mensaje,
+          detalles: err.response.data.detalles
+        });
+        setCargandoMP(false);
+        return;
+      }
+
       let msg = err.response?.data?.mensaje;
       if (!msg) {
         if (err.response?.status === 404) {
@@ -658,8 +688,8 @@ const Reservas = () => {
               </div>
 
               <p className="tour-detalles">
-                {language === 'en' 
-                  ? 'Full tour with expert guide and assistance insurance' 
+                {language === 'en'
+                  ? 'Full tour with expert guide and assistance insurance'
                   : (tour.servicios || 'Tour completo con guía experto y seguro de asistencia')}
               </p>
 
@@ -779,6 +809,34 @@ const Reservas = () => {
                 </div>
               </div>
 
+              {/* AVISO PREVENTIVO INLINE SI HAY CONFLICTO CON LA FECHA / HORA SELECCIONADAS */}
+              {(() => {
+                if (!fechaTour || !selectedTour) return null;
+                const checkInline = validarConflictoReserva({
+                  lugarId: selectedTour.id,
+                  lugarNombre: selectedTour.nombre || selectedTour.title,
+                  fecha: fechaTour,
+                  hora: horaTour || "07:00 AM",
+                  reservasExistentes: misReservas
+                });
+                if (!checkInline.hayConflicto) return null;
+                return (
+                  <div className="alerta-conflicto-inline">
+                    <div className="alerta-conflicto-inline-header">
+                      <span>⚠️</span>
+                      <strong>{checkInline.titulo}</strong>
+                    </div>
+                    <p>{checkInline.mensaje}</p>
+                    {checkInline.detalles && (
+                      <div className="alerta-conflicto-inline-detalles">
+                        <span>🗓️ <strong>{checkInline.detalles.tour_existente}</strong> ({checkInline.detalles.fecha})</span>
+                        <span>⏰ {checkInline.detalles.hora_inicio} a {checkInline.detalles.hora_fin}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* OPCIONES DE PAGO: PAGAR EL TOTAL (100%) O PAGAR EL 50% */}
               <label style={{ fontWeight: '700', color: '#0f172a', marginTop: '10px', display: 'block' }}>
                 {language === 'en' ? 'Payment Option *' : 'Opción de Pago *'}
@@ -864,8 +922,8 @@ const Reservas = () => {
                       <strong>${saldoPendienteCalc.toLocaleString()} COP</strong>
                     </div>
                     <small style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                      {esPagoTotal 
-                        ? (t.aviso_pago_total || '✓ Tu reserva quedará pagada en su totalidad sin saldo pendiente.') 
+                      {esPagoTotal
+                        ? (t.aviso_pago_total || '✓ Tu reserva quedará pagada en su totalidad sin saldo pendiente.')
                         : (t.aviso_pago_50 || 'ℹ️ El saldo pendiente (50%) se cancela antes de iniciar el tour.')}
                     </small>
                   </div>
@@ -1099,6 +1157,61 @@ const Reservas = () => {
           >
             ✕
           </button>
+        </div>
+      )}
+      {/* MODAL ADVERTENCIA Y CONFIRMACIÓN DE CONFLICTO DE HORARIO O REGLA DE GUATAPÉ */}
+      {alertaConflicto && alertaConflicto.hayConflicto && (
+        <div className="modal-overlay" style={{ zIndex: 10001 }}>
+          <div className="modal-reserva modal-alerta-conflicto">
+            <div className="icono-alerta-conflicto">
+              ⚠️
+            </div>
+
+            <h3 className="titulo-alerta-conflicto">
+              {alertaConflicto.titulo}
+            </h3>
+
+            <p className="mensaje-alerta-conflicto">
+              {alertaConflicto.mensaje}
+            </p>
+
+            {alertaConflicto.detalles && (
+              <div className="caja-detalles-conflicto">
+                <div className="fila-detalle-conflicto">
+                  <span className="etiqueta-conflicto">Tour existente:</span>
+                  <strong>{alertaConflicto.detalles.tour_existente}</strong>
+                </div>
+                <div className="fila-detalle-conflicto">
+                  <span className="etiqueta-conflicto">Fecha reservada:</span>
+                  <span>{alertaConflicto.detalles.fecha}</span>
+                </div>
+                <div className="fila-detalle-conflicto">
+                  <span className="etiqueta-conflicto">Horario existente:</span>
+                  <strong style={{ color: '#b91c1c' }}>
+                    {alertaConflicto.detalles.hora_inicio} a {alertaConflicto.detalles.hora_fin}
+                  </strong>
+                </div>
+                {alertaConflicto.detalles.hora_nueva_inicio && (
+                  <div className="fila-detalle-conflicto" style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '6px', marginTop: '4px' }}>
+                    <span className="etiqueta-conflicto">Horario que intentas reservar:</span>
+                    <span style={{ color: '#0284c7', fontWeight: '700' }}>
+                      {alertaConflicto.detalles.hora_nueva_inicio} a {alertaConflicto.detalles.hora_nueva_fin}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="acciones-conflicto-modal">
+              <button
+                type="button"
+                className="btn-entendido-conflicto"
+                onClick={() => setAlertaConflicto(null)}
+              >
+                {language === 'en' ? 'Understood, choose another date or time' : 'Entendido, elegir otra fecha u horario'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

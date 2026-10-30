@@ -1,5 +1,9 @@
 const db = require('../config/db');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middlewares/authAdmin');
 const { enviarNotificacionNuevaReserva, enviarNotificacionCancelacionReserva } = require('../utils/mailer');
+const { validarConflictoReserva } = require('../utils/validacionesReserva');
+const { actualizarReservasFinalizadas } = require('../services/reservaEstadoService');
 
 // Helper para convertir hora a formato TIME 'HH:MM:SS'
 function formatTimeToSql(hStr) {
@@ -59,8 +63,15 @@ function normalizeEstadoPago(ep) {
 // ==========================================
 // OBTENER RESERVAS (DE USUARIO O TODAS)
 // ==========================================
-exports.getAll = (req, res) => {
+exports.getAll = async (req, res) => {
   const { usuario_id } = req.query;
+
+  // Actualizar automáticamente reservas en curso cuyo tour ya finalizó en horario de Colombia
+  try {
+    await actualizarReservasFinalizadas();
+  } catch (errSync) {
+    console.warn('[Reserva Controller] Aviso no bloqueante al sincronizar reservas finalizadas:', errSync.message);
+  }
 
   let sql = `
     SELECT 
@@ -123,20 +134,40 @@ exports.create = async (req, res) => {
   } = req.body;
   const idiomaRaw = idioma || idioma_tour;
 
-  const uId = usuario_id || req.body.id_usuario || req.body.userId || req.user?.id || req.user?.id_registro;
+  // 1. Obtener identidad del usuario desde token JWT verificado o req.user
+  let uId = req.user?.id || req.user?.id_registro;
+  if (!uId) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        uId = decoded.id || decoded.id_registro;
+        req.user = decoded;
+      } catch (e) {
+        // Token inválido
+      }
+    }
+  }
+
+  // Si no se obtuvo de la cabecera, usar el id enviado asegurando que exista
+  if (!uId) {
+    uId = usuario_id || req.body.id_usuario || req.body.userId;
+  }
+
   const lId = lugar_id || req.body.id_lugar || req.body.tour_id;
 
   if (!uId || !lId || !fecha) {
     return res.status(400).json({ status: 'ERROR', mensaje: 'Faltan datos obligatorios para la reserva (usuario, lugar o fecha).' });
   }
 
-  // 1. Validar presencia e Idioma ('es' o 'en' ÚNICAMENTE)
+  // 2. Validar presencia e Idioma ('es' o 'en' ÚNICAMENTE)
   const idiomaClean = (String(idiomaRaw || 'es').toLowerCase().trim() === 'en') ? 'en' : 'es';
 
-  // 2. Validar método de pago permitido
+  // 3. Validar método de pago permitido
   const metodoPagoEnum = normalizeMetodoPago(metodo_pago);
 
-  // 3. Validar horario entre 07:00:00 y 19:00:00
+  // 4. Validar horario entre 07:00:00 y 19:00:00
   const horaSql = formatTimeToSql(hora || '07:00 AM');
   const [hStr, mStr] = horaSql.split(':');
   const hNum = parseInt(hStr, 10);
@@ -146,19 +177,24 @@ exports.create = async (req, res) => {
     return res.status(400).json({ status: 'ERROR', mensaje: 'El horario disponible para realizar reservas es de 7:00 AM a 7:00 PM.' });
   }
 
-  // 4. Formatear fecha
+  // 5. Formatear fecha a YYYY-MM-DD
   const fechaStr = fecha instanceof Date ? fecha.toISOString().split('T')[0] : String(fecha).substring(0, 10);
 
-  // 5. Contar reservas para lugar_id + fecha (Máximo 20 reservas)
-  const sqlCount = `
-    SELECT COUNT(*) as total_reservas 
-    FROM reservas 
-    WHERE lugar_id = ? AND fecha = ? AND (estado != 'cancelada')
-  `;
+  let conn = null;
+  let lockAdquirido = false;
 
-  db.query(sqlCount, [lId, fechaStr], async (errCount, resCount) => {
-    if (errCount) return res.status(500).json({ status: 'ERROR', mensaje: errCount.sqlMessage || errCount.message });
+  try {
+    conn = await db.promise().getConnection();
 
+    // 6. CONTROL DE CONCURRENCIA: Bloqueo a nivel de usuario para solicitudes simultáneas
+    const [lockRes] = await conn.query("SELECT GET_LOCK(CONCAT('reserva_usr_', ?), 5) as lock_ok", [uId]);
+    lockAdquirido = Boolean(lockRes && lockRes[0] && lockRes[0].lock_ok);
+
+    // 7. Contar reservas para lugar_id + fecha (Límite de 20 reservas por destino)
+    const [resCount] = await conn.query(
+      "SELECT COUNT(*) as total_reservas FROM reservas WHERE lugar_id = ? AND fecha = ? AND (estado != 'cancelada')",
+      [lId, fechaStr]
+    );
     const totalReservas = resCount[0]?.total_reservas || 0;
     if (totalReservas >= 20) {
       return res.status(400).json({
@@ -167,100 +203,122 @@ exports.create = async (req, res) => {
       });
     }
 
-    // 6. Obtener precio del lugar
-    db.query("SELECT * FROM lugares WHERE id = ?", [lId], async (errLugar, resLugar) => {
-      if (errLugar || resLugar.length === 0) {
-        return res.status(404).json({ status: 'ERROR', mensaje: 'Lugar turístico no encontrado.' });
+    // 8. Obtener datos del lugar turístico
+    const [resLugar] = await conn.query("SELECT * FROM lugares WHERE id = ?", [lId]);
+    if (!resLugar || resLugar.length === 0) {
+      return res.status(404).json({ status: 'ERROR', mensaje: 'Lugar turístico no encontrado.' });
+    }
+    const lugar = resLugar[0];
+
+    // 9. VALIDACIÓN CRÍTICA: Consultar reservas activas del usuario en MySQL para esta fecha
+    const [reservasExistentes] = await conn.query(
+      `SELECT r.*, l.nombre as lugar_nombre 
+       FROM reservas r 
+       LEFT JOIN lugares l ON r.lugar_id = l.id 
+       WHERE r.usuario_id = ? AND r.fecha = ? AND r.estado IN ('pendiente', 'confirmada')`,
+      [uId, fechaStr]
+    );
+
+    // Validar superposición de horarios y regla especial para Guatapé
+    const resultadoConflicto = validarConflictoReserva({
+      lugarId: lId,
+      lugarNombre: lugar.nombre,
+      fecha: fechaStr,
+      hora: horaSql,
+      reservasExistentes
+    });
+
+    if (resultadoConflicto.hayConflicto) {
+      return res.status(409).json({
+        status: 'CONFLICTO_RESERVA',
+        tipo: resultadoConflicto.tipo,
+        titulo: resultadoConflicto.titulo,
+        mensaje: resultadoConflicto.mensaje,
+        detalles: resultadoConflicto.detalles
+      });
+    }
+
+    // 10. Cálculo de importes y estado de pago
+    const cantidadPersonas = parseInt(numero_personas, 10) || 1;
+    const precioTotal = (precio_total && !isNaN(parseFloat(precio_total)))
+      ? parseFloat(parseFloat(precio_total).toFixed(2))
+      : parseFloat(((lugar.precio || 150000) * cantidadPersonas).toFixed(2));
+    const codigo = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const opcClean = String(opcion_pago || '').toLowerCase();
+    const esPagoTotal = (opcClean.includes('total') || opcClean.includes('100'));
+    let estadoPagoEnum = esPagoTotal ? 'pagado' : 'parcial';
+    const montoCalculado = esPagoTotal ? precioTotal : Math.round(precioTotal * 0.5);
+    const saldoPendienteCalculado = esPagoTotal ? 0 : (precioTotal - montoCalculado);
+
+    let estadoEnum = 'pendiente';
+    let mpPaymentIdFinal = mp_payment_id ? String(mp_payment_id).trim() : null;
+    let montoPagadoFinal = monto_abonado ? parseFloat(monto_abonado) : montoCalculado;
+
+    // 11. Verificación de seguridad con Mercado Pago si se envía mp_payment_id
+    if (mpPaymentIdFinal) {
+      // Idempotencia: Verificar si esta transacción ya fue registrada
+      const [resRepetido] = await conn.query(
+        "SELECT id, codigo, estado, estado_pago, precio_total, monto_pagado FROM reservas WHERE mp_payment_id = ?",
+        [mpPaymentIdFinal]
+      );
+      if (resRepetido && resRepetido.length > 0) {
+        const existente = resRepetido[0];
+        const saldoCalc = Math.max(0, (existente.precio_total || 0) - (existente.monto_pagado || 0));
+        console.log(`[Reserva Controller] ℹ️ Transacción MP #${mpPaymentIdFinal} ya asociada a la reserva ${existente.codigo}. Retornando reserva existente.`);
+        return res.json({
+          status: 'OK',
+          mensaje: `Esta reserva ya se encuentra registrada con el comprobante #${mpPaymentIdFinal}.`,
+          codigo: existente.codigo,
+          reservaId: existente.id,
+          estado: existente.estado,
+          estado_pago: existente.estado_pago,
+          monto_pagado: existente.monto_pagado,
+          saldo_pendiente: saldoCalc,
+          ya_existia: true
+        });
       }
 
-      const lugar = resLugar[0];
-      const cantidadPersonas = parseInt(numero_personas, 10) || 1;
-      const precioTotal = (precio_total && !isNaN(parseFloat(precio_total)))
-        ? parseFloat(parseFloat(precio_total).toFixed(2))
-        : parseFloat(((lugar.precio || 150000) * cantidadPersonas).toFixed(2));
-      const codigo = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
-
-      // Determinar estado de pago según la opción seleccionada (Pagar el total o Pagar el 50%)
-      const opcClean = String(opcion_pago || '').toLowerCase();
-      const esPagoTotal = (opcClean.includes('total') || opcClean.includes('100'));
-      let estadoPagoEnum = esPagoTotal ? 'pagado' : 'parcial';
-      const montoCalculado = esPagoTotal ? precioTotal : Math.round(precioTotal * 0.5);
-      const saldoPendienteCalculado = esPagoTotal ? 0 : (precioTotal - montoCalculado);
-
-      let estadoEnum = 'pendiente';
-      let mpPaymentIdFinal = mp_payment_id ? String(mp_payment_id).trim() : null;
-      let montoPagadoFinal = monto_abonado ? parseFloat(monto_abonado) : montoCalculado;
-
-      // 7. VERIFICACIÓN CRÍTICA DE SEGURIDAD CON MERCADO PAGO SI SE ENVÍA mp_payment_id
-      if (mpPaymentIdFinal) {
+      // Validar con SDK de Mercado Pago
+      const tokenMP = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (tokenMP) {
         try {
-          // A. Verificar si esta transacción ya fue registrada para prevenir duplicados (idempotencia)
-          const [resRepetido] = await db.promise().query(
-            "SELECT id, codigo, estado, estado_pago, precio_total, monto_pagado FROM reservas WHERE mp_payment_id = ?",
-            [mpPaymentIdFinal]
-          );
-          if (resRepetido && resRepetido.length > 0) {
-            const existente = resRepetido[0];
-            const saldoCalc = Math.max(0, (existente.precio_total || 0) - (existente.monto_pagado || 0));
-            console.log(`[Reserva Controller] ℹ️ Transacción MP #${mpPaymentIdFinal} ya asociada a la reserva ${existente.codigo}. Retornando reserva existente.`);
-            return res.json({
-              status: 'OK',
-              mensaje: `Esta reserva ya se encuentra registrada con el comprobante #${mpPaymentIdFinal}.`,
-              codigo: existente.codigo,
-              reservaId: existente.id,
-              estado: existente.estado,
-              estado_pago: existente.estado_pago,
-              monto_pagado: existente.monto_pagado,
-              saldo_pendiente: saldoCalc,
-              ya_existia: true
+          const { MercadoPagoConfig, Payment } = require('mercadopago');
+          const clientMP = new MercadoPagoConfig({ accessToken: tokenMP });
+          const payment = new Payment(clientMP);
+          const paymentData = await payment.get({ id: mpPaymentIdFinal });
+
+          if (!paymentData) {
+            return res.status(400).json({ status: 'ERROR', mensaje: 'No se encontró la transacción en Mercado Pago.' });
+          }
+
+          if (paymentData.status === 'rejected' || paymentData.status === 'cancelled') {
+            return res.status(400).json({
+              status: 'ERROR',
+              mensaje: `El pago fue rechazado en Mercado Pago (${paymentData.status_detail || 'No autorizado'}). No es posible confirmar la reserva.`
             });
           }
 
-          // B. Verificar con el SDK oficial de Mercado Pago
-          const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-          if (token) {
-            const { MercadoPagoConfig, Payment } = require('mercadopago');
-            const client = new MercadoPagoConfig({ accessToken: token });
-            const payment = new Payment(client);
-            const paymentData = await payment.get({ id: mpPaymentIdFinal });
-
-            if (!paymentData) {
+          if (paymentData.status === 'approved') {
+            const montoTransaccion = parseFloat(paymentData.transaction_amount || 0);
+            if (montoTransaccion < (montoCalculado - 50)) {
               return res.status(400).json({
                 status: 'ERROR',
-                mensaje: 'No se encontró la transacción en Mercado Pago.'
+                mensaje: `El monto pagado en Mercado Pago ($${montoTransaccion} COP) es menor al importe esperado ($${montoCalculado} COP).`
               });
             }
-
-            if (paymentData.status === 'rejected' || paymentData.status === 'cancelled') {
-              return res.status(400).json({
-                status: 'ERROR',
-                mensaje: `El pago fue rechazado en Mercado Pago (Detalle: ${paymentData.status_detail || 'No autorizado'}). No es posible confirmar la reserva.`
-              });
-            }
-
-            if (paymentData.status === 'approved') {
-              // Validar monto recibido frente al importe esperado
-              const montoTransaccion = parseFloat(paymentData.transaction_amount || 0);
-              if (montoTransaccion < (montoCalculado - 50)) {
-                return res.status(400).json({
-                  status: 'ERROR',
-                  mensaje: `El monto pagado en Mercado Pago ($${montoTransaccion} COP) es menor al importe esperado para esta reserva ($${montoCalculado} COP).`
-                });
-              }
-              montoPagadoFinal = montoTransaccion;
-              estadoEnum = 'confirmada';
-              estadoPagoEnum = esPagoTotal ? 'pagado' : 'parcial';
-            } else if (paymentData.status === 'pending' || paymentData.status === 'in_process' || paymentData.status === 'authorized') {
-              // Pago pendiente de acreditación (Bancolombia transferencia, Efecty ticket, PSE pendiente)
-              montoPagadoFinal = 0; // Aún no acreditado físicamente
-              estadoEnum = 'pendiente';
-              estadoPagoEnum = 'pendiente';
-            } else {
-              return res.status(400).json({
-                status: 'ERROR',
-                mensaje: `El estado del pago (${paymentData.status}) no permite registrar la reserva.`
-              });
-            }
+            montoPagadoFinal = montoTransaccion;
+            estadoEnum = 'confirmada';
+            estadoPagoEnum = esPagoTotal ? 'pagado' : 'parcial';
+          } else if (paymentData.status === 'pending' || paymentData.status === 'in_process' || paymentData.status === 'authorized') {
+            montoPagadoFinal = 0;
+            estadoEnum = 'pendiente';
+            estadoPagoEnum = 'pendiente';
+          } else {
+            return res.status(400).json({
+              status: 'ERROR',
+              mensaje: `El estado del pago (${paymentData.status}) no permite registrar la reserva.`
+            });
           }
         } catch (errMP) {
           console.error('[Reserva Controller] Error al verificar transacción MP:', errMP.message);
@@ -270,91 +328,102 @@ exports.create = async (req, res) => {
           });
         }
       }
+    }
 
-      // 8. INSERT ESPECIFICANDO EXACTAMENTE LOS NOMBRES DE LAS COLUMNAS
-      const sqlInsert = `
-        INSERT INTO reservas (
-          usuario_id,
-          lugar_id,
-          fecha,
-          hora,
-          numero_personas,
-          idioma,
-          precio_total,
-          metodo_pago,
-          estado_pago,
-          estado,
-          codigo,
-          mp_payment_id,
-          monto_pagado
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      db.query(sqlInsert, [
-        uId,
-        lId,
-        fechaStr,
-        horaSql,
-        cantidadPersonas,
-        idiomaClean,
-        precioTotal,
-        metodoPagoEnum,
-        estadoPagoEnum,
-        estadoEnum,
+    // 12. INSERT EN TABLA RESERVAS
+    const sqlInsert = `
+      INSERT INTO reservas (
+        usuario_id,
+        lugar_id,
+        fecha,
+        hora,
+        numero_personas,
+        idioma,
+        precio_total,
+        metodo_pago,
+        estado_pago,
+        estado,
         codigo,
-        mpPaymentIdFinal,
-        montoPagadoFinal
-      ], (errInsert, resInsert) => {
-        if (errInsert) return res.status(500).json({ status: 'ERROR', mensaje: errInsert.sqlMessage || errInsert.message });
+        mp_payment_id,
+        monto_pagado
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
-        // Consultar datos reales del cliente registrado para la notificación
-        db.query("SELECT nombre_usuario, correo_electronico, telefono FROM registro_usuarios WHERE id_registro = ?", [uId], (errUser, resUser) => {
-          const cliente = (resUser && resUser.length > 0) ? resUser[0] : null;
-          const clienteNombre = cliente?.nombre_usuario || req.body.nombre_completo || 'Cliente EmiTours';
-          const clienteCorreo = cliente?.correo_electronico || req.body.correo_electronico || 'No especificado';
-          const clienteTelefono = cliente?.telefono || req.body.celular || 'No especificado';
+    const [resInsert] = await conn.query(sqlInsert, [
+      uId,
+      lId,
+      fechaStr,
+      horaSql,
+      cantidadPersonas,
+      idiomaClean,
+      precioTotal,
+      metodoPagoEnum,
+      estadoPagoEnum,
+      estadoEnum,
+      codigo,
+      mpPaymentIdFinal,
+      montoPagadoFinal
+    ]);
 
-          // Enviar notificación por correo al Administrador (asíncrono y a prueba de fallos)
-          enviarNotificacionNuevaReserva({
-            codigo,
-            clienteNombre,
-            clienteCorreo,
-            clienteTelefono,
-            tourNombre: lugar.nombre,
-            fecha: fechaStr,
-            hora: hora || horaSql,
-            numeroPersonas: cantidadPersonas,
-            idioma: (idiomaClean === 'en') ? 'Inglés' : 'Español',
-            precioTotal,
-            metodoPago: metodoPagoEnum.toUpperCase(),
-            estadoReserva: estadoEnum,
-            estadoPago: estadoPagoEnum === 'pagado' ? 'Pagado (100%)' : `Parcial (50% abonado: $${montoPagadoFinal.toLocaleString()} COP, Saldo: $${saldoPendienteCalculado.toLocaleString()} COP)`
-          }).catch(errMail => {
-            console.error(`[Reserva Controller] ❌ Error no bloqueante al enviar correo de reserva ${codigo}:`, errMail.message);
-          });
+    // 13. Consultar datos del cliente para la notificación
+    const [resUser] = await conn.query(
+      "SELECT nombre_usuario, correo_electronico, telefono FROM registro_usuarios WHERE id_registro = ?",
+      [uId]
+    );
+    const cliente = (resUser && resUser.length > 0) ? resUser[0] : null;
+    const clienteNombre = cliente?.nombre_usuario || req.body.nombre_completo || 'Cliente EmiTours';
+    const clienteCorreo = cliente?.correo_electronico || req.body.correo_electronico || 'No especificado';
+    const clienteTelefono = cliente?.telefono || req.body.celular || 'No especificado';
 
-          // Notificación interna
-          db.query("INSERT INTO notificaciones (tipo, mensaje) VALUES ('Reserva', ?)", [
-            `Nueva reserva ${codigo} confirmada para ${lugar.nombre} (${cantidadPersonas} pers, Pago MP: ${mpPaymentIdFinal || 'Directo'}).`
-          ], () => {});
-
-          // Responder al cliente confirmando que la reserva se guardó en MySQL
-          res.json({
-            status: 'OK',
-            mensaje: '✅ Reserva registrada exitosamente.',
-            codigo,
-            reservaId: resInsert.insertId,
-            estado: estadoEnum,
-            estado_pago: estadoPagoEnum,
-            monto_pagado: montoPagadoFinal,
-            saldo_pendiente: saldoPendienteCalculado,
-            reservasRestantesFecha: 20 - (totalReservas + 1)
-          });
-        });
-      });
+    // Enviar notificación por correo al Administrador vía Resend (asíncrono y no bloqueante)
+    enviarNotificacionNuevaReserva({
+      codigo,
+      clienteNombre,
+      clienteCorreo,
+      clienteTelefono,
+      tourNombre: lugar.nombre,
+      fecha: fechaStr,
+      hora: hora || horaSql,
+      numeroPersonas: cantidadPersonas,
+      idioma: (idiomaClean === 'en') ? 'Inglés' : 'Español',
+      precioTotal,
+      metodoPago: metodoPagoEnum.toUpperCase(),
+      estadoReserva: estadoEnum,
+      estadoPago: estadoPagoEnum === 'pagado' ? 'Pagado (100%)' : `Parcial (50% abonado: $${montoPagadoFinal.toLocaleString()} COP, Saldo: $${saldoPendienteCalculado.toLocaleString()} COP)`
+    }).catch(errMail => {
+      console.error(`[Reserva Controller] ❌ Error no bloqueante al enviar correo de reserva ${codigo}:`, errMail.message);
     });
-  });
+
+    // Notificación interna
+    conn.query("INSERT INTO notificaciones (tipo, mensaje) VALUES ('Reserva', ?)", [
+      `Nueva reserva ${codigo} confirmada para ${lugar.nombre} (${cantidadPersonas} pers, Pago MP: ${mpPaymentIdFinal || 'Directo'}).`
+    ]).catch(() => {});
+
+    // Responder al cliente confirmando la reserva exitosa
+    return res.json({
+      status: 'OK',
+      mensaje: '✅ Reserva registrada exitosamente.',
+      codigo,
+      reservaId: resInsert.insertId,
+      estado: estadoEnum,
+      estado_pago: estadoPagoEnum,
+      monto_pagado: montoPagadoFinal,
+      saldo_pendiente: saldoPendienteCalculado,
+      reservasRestantesFecha: 20 - (totalReservas + 1)
+    });
+
+  } catch (err) {
+    console.error('[Reserva Controller] ❌ Error en create reserva:', err);
+    return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message || 'Error interno al crear reserva.' });
+  } finally {
+    if (conn) {
+      if (lockAdquirido) {
+        await conn.query("SELECT RELEASE_LOCK(CONCAT('reserva_usr_', ?))", [uId]).catch(() => {});
+      }
+      conn.release();
+    }
+  }
 };
 
 // ==========================================

@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const db = require('../config/db');
+const { validarConflictoReserva } = require('../utils/validacionesReserva');
 
 // Inicializar cliente Mercado Pago con Access Token del entorno
 const getMercadoPagoClient = () => {
@@ -89,6 +90,34 @@ exports.crearPreferencia = async (req, res) => {
       return res.status(404).json({ status: 'ERROR', mensaje: 'Tour o lugar no encontrado.' });
     }
     const lugar = resLugar[0];
+    const lugarNombre = lugar.nombre || '';
+
+    // 2.1 VALIDAR CONFLICTOS DE HORARIO Y REGLA ESPECIAL DE GUATAPÉ ANTES DE INICIAR COBRO
+    const [reservasExistentes] = await db.promise().query(
+      `SELECT r.*, l.nombre as lugar_nombre 
+       FROM reservas r 
+       LEFT JOIN lugares l ON r.lugar_id = l.id 
+       WHERE r.usuario_id = ? AND r.fecha = ? AND r.estado IN ('pendiente', 'confirmada')`,
+      [uId, fechaStr]
+    );
+
+    const resultadoConflicto = validarConflictoReserva({
+      lugarId: lId,
+      lugarNombre,
+      fecha: fechaStr,
+      hora: hora || '07:00 AM',
+      reservasExistentes
+    });
+
+    if (resultadoConflicto.hayConflicto) {
+      return res.status(409).json({
+        status: 'CONFLICTO_RESERVA',
+        tipo: resultadoConflicto.tipo,
+        titulo: resultadoConflicto.titulo,
+        mensaje: resultadoConflicto.mensaje,
+        detalles: resultadoConflicto.detalles
+      });
+    }
 
     // Precios por defecto acordes al catálogo del sistema si no están en la tabla
     const preciosCatalogados = {
