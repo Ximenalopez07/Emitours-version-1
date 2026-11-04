@@ -288,3 +288,93 @@ export function validarConflictoReserva({
 
   return { hayConflicto: false };
 }
+
+// Horario oficial permitido de reservas en EmiTours: 07:00 AM a 04:00 PM
+export const HORA_MINIMA_MINUTOS = 7 * 60; // 07:00 AM (420 minutos)
+export const HORA_MAXIMA_MINUTOS = 16 * 60; // 04:00 PM (960 minutos)
+
+export const HORARIOS_OFICIALES = [
+  "07:00 AM", "07:30 AM", "08:00 AM", "08:30 AM",
+  "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
+  "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM",
+  "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
+  "03:00 PM", "03:30 PM", "04:00 PM"
+];
+
+/**
+ * Valida si una fecha y hora de reserva cumplen con:
+ * 1. No ser una fecha en el pasado respecto a Colombia (America/Bogota).
+ * 2. Estar dentro del rango permitido (07:00 AM a 04:00 PM).
+ * 3. Si la fecha es hoy, que la hora no haya pasado ni sea la hora actual de Colombia.
+ * 
+ * @param {string|Date} fecha - Fecha solicitada (YYYY-MM-DD)
+ * @param {string} hora - Hora solicitada (ej: "07:00 AM", "04:00 PM", "16:00:00")
+ * @param {number} [timestampActual] - Timestamp actual en milisegundos UTC (Date.now() por defecto)
+ * @returns {Object} { esValido: boolean, motivo?: string, mensaje?: string }
+ */
+export function validarHorarioPermitido(fecha, hora, timestampActual = Date.now()) {
+  const fechaStr = normalizarFecha(fecha);
+  if (!fechaStr) {
+    return {
+      esValido: false,
+      motivo: 'FECHA_INVALIDA',
+      mensaje: 'La fecha de la reserva es requerida y debe ser válida.'
+    };
+  }
+
+  const hoyColombia = getHoraActualColombia(new Date(timestampActual));
+  const hoyStr = hoyColombia.fecha;
+
+  // 1. Validar que la fecha no sea anterior a hoy en Colombia
+  if (fechaStr < hoyStr) {
+    return {
+      esValido: false,
+      motivo: 'FECHA_PASADA',
+      mensaje: 'No es posible seleccionar una fecha anterior a la fecha actual.'
+    };
+  }
+
+  const minutos = horaAMinutos(hora);
+
+  // 2. Validar rango permitido: 07:00 AM (420 min) a 04:00 PM (960 min)
+  if (minutos < HORA_MINIMA_MINUTOS || minutos > HORA_MAXIMA_MINUTOS) {
+    return {
+      esValido: false,
+      motivo: 'HORARIO_FUERA_RANGO',
+      mensaje: 'El horario disponible para realizar reservas es de 7:00 AM a 4:00 PM.'
+    };
+  }
+
+  // 3. Si la fecha es hoy en Colombia, la hora no puede haber pasado ni ser igual a la actual
+  if (fechaStr === hoyStr) {
+    const totalHoras = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+    const hStr = String(totalHoras).padStart(2, '0');
+    const mStr = String(mins).padStart(2, '0');
+    const timestampInicio = new Date(`${fechaStr}T${hStr}:${mStr}:00-05:00`).getTime();
+
+    if (timestampActual >= timestampInicio) {
+      return {
+        esValido: false,
+        motivo: 'HORA_PASADA',
+        mensaje: 'La hora seleccionada ya pasó para el día de hoy. Por favor selecciona una hora futura disponible.'
+      };
+    }
+  }
+
+  return { esValido: true };
+}
+
+/**
+ * Obtiene la lista de horarios oficiales disponibles para una fecha específica,
+ * filtrando automáticamente horas pasadas si la fecha corresponde a hoy en Colombia.
+ * 
+ * @param {string|Date} fecha - Fecha a consultar
+ * @param {number} [timestampActual] - Timestamp actual en milisegundos UTC
+ * @returns {Array<string>} Array con los horarios disponibles
+ */
+export function obtenerHorariosDisponiblesParaFecha(fecha, timestampActual = Date.now()) {
+  const fechaStr = normalizarFecha(fecha);
+  if (!fechaStr) return HORARIOS_OFICIALES;
+  return HORARIOS_OFICIALES.filter(h => validarHorarioPermitido(fechaStr, h, timestampActual).esValido);
+}

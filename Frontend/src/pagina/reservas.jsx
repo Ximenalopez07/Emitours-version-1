@@ -1,22 +1,26 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { UIContext } from "../context/UIContext";
 import { getLugares, getReservas, createReserva, crearPreferenciaMP, verificarPagoMP, cancelarReserva } from "../api";
-import { validarConflictoReserva } from "../utils/validacionesReserva";
+import {
+  validarConflictoReserva,
+  validarHorarioPermitido,
+  obtenerHorariosDisponiblesParaFecha,
+  getHoraActualColombia,
+  normalizarFecha
+} from "../utils/validacionesReserva";
 import { translations } from "../utils/translations";
 import "./reservas.css";
 
 // MÉTODOS DE PAGO PERMITIDOS (ÚNICAMENTE NEQUI Y PSE)
 const METODOS_PAGO_PERMITIDOS = ['Nequi', 'PSE'];
 
-// LISTADO DE HORARIOS EN INTERVALOS DE 30 MINUTOS (07:00 AM - 07:00 PM)
+// LISTADO DE HORARIOS EN INTERVALOS DE 30 MINUTOS (07:00 AM - 04:00 PM)
 const HORARIOS_DISPONIBLES = [
   "07:00 AM", "07:30 AM", "08:00 AM", "08:30 AM",
   "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
   "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM",
   "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
-  "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
-  "05:00 PM", "05:30 PM", "06:00 PM", "06:30 PM",
-  "07:00 PM"
+  "03:00 PM", "03:30 PM", "04:00 PM"
 ];
 
 // =========================================================================
@@ -161,6 +165,25 @@ const Reservas = () => {
 
   // ESTADO PARA ADVERTENCIA DE CONFLICTO DE HORARIO O REGLA DE GUATAPÉ
   const [alertaConflicto, setAlertaConflicto] = useState(null);
+
+  // HORARIOS DISPONIBLES SEGÚN LA FECHA SELECCIONADA (07:00 AM A 04:00 PM Y FILTRADO DE HORAS PASADAS PARA HOY)
+  const horariosDisponiblesActuales = useMemo(() => {
+    if (!fechaTour) return HORARIOS_DISPONIBLES;
+    return obtenerHorariosDisponiblesParaFecha(fechaTour);
+  }, [fechaTour]);
+
+  // Actualizar automáticamente la hora seleccionada cuando cambia la fecha
+  useEffect(() => {
+    if (!fechaTour) return;
+    const disponibles = obtenerHorariosDisponiblesParaFecha(fechaTour);
+    if (disponibles.length > 0) {
+      if (!disponibles.includes(horaTour)) {
+        setHoraTour(disponibles[0]);
+      }
+    } else {
+      setHoraTour("");
+    }
+  }, [fechaTour]);
 
   // Función para confirmar la cancelación tras la advertencia del usuario
   const handleConfirmarCancelacion = async () => {
@@ -432,6 +455,18 @@ const Reservas = () => {
 
     if (!fechaTour) {
       setErrorForm(language === 'en' ? 'Please select the tour date first.' : 'Por favor selecciona primero la fecha del tour.');
+      return;
+    }
+
+    if (!horaTour) {
+      setErrorForm(language === 'en' ? 'No time slots available for this date. Please choose another date.' : 'No hay horarios disponibles para esta fecha. Por favor selecciona otra fecha.');
+      return;
+    }
+
+    // VALIDACIÓN ESTRICTA DE HORARIO PERMITIDO (07:00 AM - 04:00 PM) Y HORAS PASADAS EN COLOMBIA
+    const valHorario = validarHorarioPermitido(fechaTour, horaTour);
+    if (!valHorario.esValido) {
+      setErrorForm(valHorario.mensaje);
       return;
     }
 
@@ -773,7 +808,7 @@ const Reservas = () => {
                   <input
                     type="date"
                     value={fechaTour}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={getHoraActualColombia().fecha}
                     onChange={(e) => setFechaTour(e.target.value)}
                     required
                   />
@@ -788,12 +823,28 @@ const Reservas = () => {
                     onChange={(e) => setHoraTour(e.target.value)}
                     required
                     className="select-hora-sencillo"
+                    disabled={horariosDisponiblesActuales.length === 0}
                   >
-                    {HORARIOS_DISPONIBLES.map((horario, index) => (
-                      <option key={index} value={horario}>{horario}</option>
-                    ))}
+                    {horariosDisponiblesActuales.length === 0 ? (
+                      <option value="" disabled>
+                        {language === 'en'
+                          ? 'No times available for today'
+                          : 'Sin horarios disponibles para hoy'}
+                      </option>
+                    ) : (
+                      horariosDisponiblesActuales.map((horario, index) => (
+                        <option key={index} value={horario}>{horario}</option>
+                      ))
+                    )}
                   </select>
-                  <small className="help-text">07:00 AM - 07:00 PM</small>
+                  <small className="help-text">07:00 AM - 04:00 PM</small>
+                  {fechaTour && normalizarFecha(fechaTour) === getHoraActualColombia().fecha && horariosDisponiblesActuales.length === 0 && (
+                    <div style={{ marginTop: '6px', color: '#b91c1c', fontSize: '12px', fontWeight: '600' }}>
+                      ⚠️ {language === 'en'
+                        ? 'All time slots for today have passed (allowed up to 4:00 PM). Please select another date.'
+                        : 'Ya pasaron todos los horarios de tours para hoy (permitido hasta las 4:00 PM). Selecciona otra fecha.'}
+                    </div>
+                  )}
                 </div>
 
                 <div>

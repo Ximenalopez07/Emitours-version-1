@@ -122,7 +122,7 @@ export const translations = {
 
     // Reservas
     reservas_titulo: "RESERVAS EMITOURS",
-    reservas_desc: "Selecciona tu tour preferido y asegura tus cupos. Horario permitido de reservas: 07:00 AM a 07:00 PM.",
+    reservas_desc: "Selecciona tu tour preferido y asegura tus cupos. Horario permitido de reservas: 07:00 AM a 04:00 PM.",
     reservar_ahora: "Reservar Ahora",
     cupos_disponibles_tag: "cupos disponibles",
     sin_disponibilidad: "Sin disponibilidad",
@@ -131,7 +131,7 @@ export const translations = {
     celular: "Número de Celular",
     cantidad_personas: "Cantidad de Personas",
     fecha_tour: "Fecha del Tour",
-    hora_tour: "Hora del Tour (07:00 AM - 07:00 PM)",
+    hora_tour: "Hora del Tour (07:00 AM - 04:00 PM)",
     metodo_pago: "Método de Pago",
     opcion_pago: "Opción de Pago",
     pagar_total: "Pagar el total (100% de la reserva)",
@@ -180,7 +180,7 @@ export const translations = {
 
     // Error Límite 20 Reservas
     error_limite_20: "Lo sentimos, este lugar ya alcanzó el límite de 20 reservas para esta fecha. Por favor selecciona otra fecha o lugar.",
-    error_horario_invalido: "El horario disponible para realizar reservas es de 7:00 AM a 7:00 PM.",
+    error_horario_invalido: "El horario disponible para realizar reservas es de 7:00 AM a 4:00 PM.",
     error_metodo_pago_invalido: "Método de pago no válido.",
 
     // Chatbot IA (Menú Enumerado)
@@ -449,7 +449,7 @@ export const translations = {
 
     // Reservations
     reservas_titulo: "EMITOURS RESERVATIONS",
-    reservas_desc: "Select your preferred tour and secure your spots. Allowed reservation hours: 07:00 AM to 07:00 PM.",
+    reservas_desc: "Select your preferred tour and secure your spots. Allowed reservation hours: 07:00 AM to 04:00 PM.",
     reservar_ahora: "Book Now",
     cupos_disponibles_tag: "spots available",
     sin_disponibilidad: "No Availability",
@@ -458,7 +458,7 @@ export const translations = {
     celular: "Cell Phone Number",
     cantidad_personas: "Number of People",
     fecha_tour: "Tour Date",
-    hora_tour: "Tour Time (07:00 AM - 07:00 PM)",
+    hora_tour: "Tour Time (07:00 AM - 04:00 PM)",
     metodo_pago: "Payment Method",
     opcion_pago: "Payment Option",
     pagar_total: "Pay in full (100% of reservation)",
@@ -510,7 +510,7 @@ export const translations = {
 
     // Limit error
     error_limite_20: "Sorry, this place has reached the 20 reservations limit for this date. Please select another date or place.",
-    error_horario_invalido: "Booking time must be between 7:00 AM and 7:00 PM.",
+    error_horario_invalido: "Booking time must be between 7:00 AM and 4:00 PM.",
     error_metodo_pago_invalido: "Invalid payment method. Choose Nequi, PSE, Cash, or Card Terminal.",
 
     // Chatbot AI (Numbered Menu)

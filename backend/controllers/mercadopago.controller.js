@@ -2,7 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const db = require('../config/db');
-const { validarConflictoReserva } = require('../utils/validacionesReserva');
+const { validarConflictoReserva, validarHorarioPermitido } = require('../utils/validacionesReserva');
 
 // Inicializar cliente Mercado Pago con Access Token del entorno
 const getMercadoPagoClient = () => {
@@ -92,7 +92,13 @@ exports.crearPreferencia = async (req, res) => {
     const lugar = resLugar[0];
     const lugarNombre = lugar.nombre || '';
 
-    // 2.1 VALIDAR CONFLICTOS DE HORARIO Y REGLA ESPECIAL DE GUATAPÉ ANTES DE INICIAR COBRO
+    // 2.1 Validar horario permitido (07:00 AM a 04:00 PM) y bloqueo de horas pasadas
+    const valHorario = validarHorarioPermitido(fechaStr, hora || '07:00 AM');
+    if (!valHorario.esValido) {
+      return res.status(400).json({ status: 'ERROR', mensaje: valHorario.mensaje });
+    }
+
+    // 2.2 VALIDAR CONFLICTOS DE HORARIO Y REGLA ESPECIAL DE GUATAPÉ ANTES DE INICIAR COBRO
     const [reservasExistentes] = await db.promise().query(
       `SELECT r.*, l.nombre as lugar_nombre 
        FROM reservas r 

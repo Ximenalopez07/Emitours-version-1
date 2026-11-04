@@ -135,8 +135,8 @@ async function consultarDisponibilidadGuatape(query, fecha, isEnglish) {
 // 4. Cómo reservar
 function mostrarInstruccionesReserva(isEnglish) {
   return isEnglish
-    ? "📋 **How to book a tour at EmiTours:**\n\n1. Go to the **Reservations** section from the top menu or by clicking the button below.\n2. Choose the tour you wish to experience (Guatapé, Comuna 13, etc.).\n3. Select your date, preferred schedule (7:00 AM - 7:00 PM), number of people, and tour language (Spanish or English).\n4. Choose your payment method: Nequi, PSE, Cash, or Datáfono.\n5. Pay the **mandatory 50% initial payment** (or full payment) to confirm your reservation.\n6. You will instantly receive your unique reservation code!"
-    : "📋 **Pasos para realizar una reserva en EmiTours:**\n\n1. Ingresa a la sección de **Reservas** desde el menú superior o haciendo clic en el botón de abajo.\n2. Selecciona el tour que deseas realizar (Guatapé, Comuna 13, etc.).\n3. Elige la fecha, horario deseado (7:00 AM - 7:00 PM), cantidad de personas e idioma (Español o Inglés).\n4. Selecciona tu método de pago: Nequi, PSE, Efectivo o Datáfono.\n5. Realiza el **abono inicial obligatorio del 50%** (o pago total) para asegurar tus cupos.\n6. ¡Listo! Recibirás de inmediato tu código único de reserva.";
+    ? "📋 **How to book a tour at EmiTours:**\n\n1. Go to the **Reservations** section from the top menu or by clicking the button below.\n2. Choose the tour you wish to experience (Guatapé, Comuna 13, etc.).\n3. Select your date, preferred schedule (7:00 AM - 4:00 PM), number of people, and tour language (Spanish or English).\n4. Choose your payment method: Nequi, PSE, Cash, or Datáfono.\n5. Pay the **mandatory 50% initial payment** (or full payment) to confirm your reservation.\n6. You will instantly receive your unique reservation code!"
+    : "📋 **Pasos para realizar una reserva en EmiTours:**\n\n1. Ingresa a la sección de **Reservas** desde el menú superior o haciendo clic en el botón de abajo.\n2. Selecciona el tour que deseas realizar (Guatapé, Comuna 13, etc.).\n3. Elige la fecha, horario deseado (7:00 AM - 4:00 PM), cantidad de personas e idioma (Español o Inglés).\n4. Selecciona tu método de pago: Nequi, PSE, Efectivo o Datáfono.\n5. Realiza el **abono inicial obligatorio del 50%** (o pago total) para asegurar tus cupos.\n6. ¡Listo! Recibirás de inmediato tu código único de reserva.";
 }
 
 // 5. Métodos de pago habilitados
@@ -149,8 +149,8 @@ function consultarMetodosPago(isEnglish) {
 // 6. Horarios permitidos
 function consultarHorarios(isEnglish) {
   return isEnglish
-    ? "⏰ **Official Tour Schedules at EmiTours:**\n\n• Tours operate daily from **7:00 AM to 7:00 PM**.\n• Departures are scheduled in **30-minute intervals** (07:00 AM, 07:30 AM, 08:00 AM ... up to 07:00 PM).\n• You can select your preferred time slot when filling out your booking in the Reservations section."
-    : "⏰ **Horarios Oficiales de Tours en EmiTours:**\n\n• Los horarios permitidos para reservar y realizar tours son de **7:00 AM a 7:00 PM**, todos los días.\n• Las salidas se programan en intervalos de **30 minutos** (07:00 AM, 07:30 AM, 08:00 AM ... hasta 07:00 PM).\n• Puedes elegir la hora exacta que prefieras al momento de completar tu reserva.";
+    ? "⏰ **Official Tour Schedules at EmiTours:**\n\n• Tours operate daily from **7:00 AM to 4:00 PM**.\n• Departures are scheduled in **30-minute intervals** (07:00 AM, 07:30 AM, 08:00 AM ... up to 04:00 PM).\n• You can select your preferred time slot when filling out your booking in the Reservations section."
+    : "⏰ **Horarios Oficiales de Tours en EmiTours:**\n\n• Los horarios permitidos para reservar y realizar tours son de **7:00 AM a 4:00 PM**, todos los días.\n• Las salidas se programan en intervalos de **30 minutos** (07:00 AM, 07:30 AM, 08:00 AM ... hasta 04:00 PM).\n• Puedes elegir la hora exacta que prefieras al momento de completar tu reserva.";
 }
 
 // 7. Guías turísticos

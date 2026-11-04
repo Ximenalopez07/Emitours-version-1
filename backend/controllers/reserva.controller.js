@@ -2,7 +2,7 @@ const db = require('../config/db');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middlewares/authAdmin');
 const { enviarNotificacionNuevaReserva, enviarNotificacionCancelacionReserva } = require('../utils/mailer');
-const { validarConflictoReserva } = require('../utils/validacionesReserva');
+const { validarConflictoReserva, validarHorarioPermitido } = require('../utils/validacionesReserva');
 const { actualizarReservasFinalizadas } = require('../services/reservaEstadoService');
 
 // Helper para convertir hora a formato TIME 'HH:MM:SS'
@@ -167,18 +167,15 @@ exports.create = async (req, res) => {
   // 3. Validar método de pago permitido
   const metodoPagoEnum = normalizeMetodoPago(metodo_pago);
 
-  // 4. Validar horario entre 07:00:00 y 19:00:00
-  const horaSql = formatTimeToSql(hora || '07:00 AM');
-  const [hStr, mStr] = horaSql.split(':');
-  const hNum = parseInt(hStr, 10);
-  const mNum = parseInt(mStr, 10);
-
-  if (hNum < 7 || hNum > 19 || (hNum === 19 && mNum > 0)) {
-    return res.status(400).json({ status: 'ERROR', mensaje: 'El horario disponible para realizar reservas es de 7:00 AM a 7:00 PM.' });
-  }
-
-  // 5. Formatear fecha a YYYY-MM-DD
+  // 4. Formatear fecha a YYYY-MM-DD
   const fechaStr = fecha instanceof Date ? fecha.toISOString().split('T')[0] : String(fecha).substring(0, 10);
+
+  // 5. Validar horario permitido (07:00 AM a 04:00 PM) y bloqueo de horas pasadas
+  const horaSql = formatTimeToSql(hora || '07:00 AM');
+  const valHorario = validarHorarioPermitido(fechaStr, horaSql);
+  if (!valHorario.esValido) {
+    return res.status(400).json({ status: 'ERROR', mensaje: valHorario.mensaje });
+  }
 
   let conn = null;
   let lockAdquirido = false;
