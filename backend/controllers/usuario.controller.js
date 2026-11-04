@@ -13,52 +13,60 @@ function validarDocumento(pais, tipoDocumento, numero) {
   if (!numero || typeof numero !== 'string') {
     return { valido: false, mensaje: "El número de documento es obligatorio." };
   }
-  if (numero.includes(' ')) {
+  const numTrim = numero.trim();
+  if (!numTrim) {
+    return { valido: false, mensaje: "El número de documento es obligatorio." };
+  }
+  if (numero.includes(' ') || /\s/.test(numero)) {
     return { valido: false, mensaje: "El número de documento no puede contener espacios." };
   }
 
-  const paisNorm = (pais || 'Colombia').trim();
-  const tipoNorm = (tipoDocumento || 'Cédula de ciudadanía').trim();
-  const numClean = numero.trim();
+  const tipoNorm = (tipoDocumento || 'Cédula de ciudadanía').trim().toLowerCase();
 
-  if (paisNorm.toLowerCase() === 'colombia') {
-    if (tipoNorm.toLowerCase().includes('ciudadanía') || tipoNorm.toLowerCase().includes('ciudadania')) {
-      // Cédula de ciudadanía: sólo dígitos numéricos, 6 a 10 dígitos
-      if (!/^\d{6,10}$/.test(numClean)) {
-        return { valido: false, mensaje: "La cédula de ciudadanía colombiana debe tener entre 6 y 10 dígitos numéricos sin letras ni símbolos." };
-      }
-      // Rechazar secuencias evidentemente inválidas (ej. todos los dígitos iguales)
-      if (/^(\d)\1+$/.test(numClean)) {
-        return { valido: false, mensaje: "El número de cédula ingresado no es válido." };
-      }
-      return { valido: true, numeroNormalizado: numClean };
-    } else if (tipoNorm.toLowerCase().includes('extranjería') || tipoNorm.toLowerCase().includes('extranjeria')) {
-      // Cédula de extranjería: 6 a 10 caracteres alfanuméricos
-      if (!/^[A-Za-z0-9]{6,10}$/.test(numClean)) {
-        return { valido: false, mensaje: "La cédula de extranjería debe contener entre 6 y 10 caracteres alfanuméricos sin espacios." };
-      }
-      return { valido: true, numeroNormalizado: numClean.toUpperCase() };
-    } else if (tipoNorm.toLowerCase().includes('pasaporte')) {
-      // Pasaporte: 6 a 15 caracteres alfanuméricos
-      if (!/^[A-Za-z0-9]{6,15}$/.test(numClean)) {
-        return { valido: false, mensaje: "El pasaporte debe contener entre 6 y 15 caracteres alfanuméricos sin espacios." };
-      }
-      return { valido: true, numeroNormalizado: numClean.toUpperCase() };
+  // 1. Cédula de ciudadanía: únicamente números, 6 a 10 dígitos, sin letras ni caracteres especiales
+  if (tipoNorm.includes('ciudadanía') || tipoNorm.includes('ciudadania')) {
+    if (!/^\d+$/.test(numTrim)) {
+      return { valido: false, mensaje: "La cédula de ciudadanía debe contener únicamente números (sin letras, espacios ni caracteres especiales)." };
     }
+    if (numTrim.length < 6 || numTrim.length > 10) {
+      return { valido: false, mensaje: "La cédula de ciudadanía debe tener entre 6 y 10 dígitos numéricos." };
+    }
+    if (/^(\d)\1+$/.test(numTrim)) {
+      return { valido: false, mensaje: "El número de cédula ingresado no es válido." };
+    }
+    return { valido: true, numeroNormalizado: numTrim };
   }
 
-  // Otros países
-  if (tipoNorm.toLowerCase().includes('pasaporte')) {
-    if (!/^[A-Za-z0-9]{6,15}$/.test(numClean)) {
-      return { valido: false, mensaje: "El pasaporte internacional debe contener entre 6 y 15 caracteres alfanuméricos." };
+  // 2. Cédula de extranjería: únicamente números, 6 a 12 dígitos, sin letras ni caracteres especiales
+  if (tipoNorm.includes('extranjería') || tipoNorm.includes('extranjeria')) {
+    if (!/^\d+$/.test(numTrim)) {
+      return { valido: false, mensaje: "La cédula de extranjería debe contener únicamente números (sin letras, espacios ni caracteres especiales)." };
     }
-    return { valido: true, numeroNormalizado: numClean.toUpperCase() };
-  } else {
-    if (!/^[A-Za-z0-9\-]{5,20}$/.test(numClean)) {
-      return { valido: false, mensaje: "El documento de identificación debe tener entre 5 y 20 caracteres sin espacios." };
+    if (numTrim.length < 6 || numTrim.length > 12) {
+      return { valido: false, mensaje: "La cédula de extranjería debe tener entre 6 y 12 dígitos numéricos." };
     }
-    return { valido: true, numeroNormalizado: numClean.toUpperCase() };
+    if (/^(\d)\1+$/.test(numTrim)) {
+      return { valido: false, mensaje: "El número de cédula de extranjería ingresado no es válido." };
+    }
+    return { valido: true, numeroNormalizado: numTrim };
   }
+
+  // 3. Pasaporte: letras y números, 6 a 20 caracteres, mayúsculas, sin espacios ni símbolos especiales
+  if (tipoNorm.includes('pasaporte') || tipoNorm.includes('passport')) {
+    if (!/^[A-Za-z0-9]+$/.test(numTrim)) {
+      return { valido: false, mensaje: "El pasaporte debe contener únicamente letras y números (sin espacios ni símbolos especiales)." };
+    }
+    if (numTrim.length < 6 || numTrim.length > 20) {
+      return { valido: false, mensaje: "El pasaporte debe tener entre 6 y 20 caracteres alfanuméricos." };
+    }
+    return { valido: true, numeroNormalizado: numTrim.toUpperCase() };
+  }
+
+  // 4. Otros documentos (compatibilidad)
+  if (!/^[A-Za-z0-9]{6,20}$/.test(numTrim)) {
+    return { valido: false, mensaje: "El documento de identificación debe contener entre 6 y 20 caracteres alfanuméricos sin espacios ni símbolos especiales." };
+  }
+  return { valido: true, numeroNormalizado: numTrim.toUpperCase() };
 }
 
 // Generador de código criptográfico de 6 dígitos seguro
@@ -922,13 +930,16 @@ exports.googleRegister = async (req, res) => {
     }
     const cedulaNormalizada = validacionDoc.numeroNormalizado;
 
-    // 4. Validar unicidad del documento en la BD
+    // 4. Validar unicidad del documento en la BD respetando el índice compuesto (pais, tipo_documento, cedula)
     const docExistente = await query(
-      "SELECT id_registro FROM registro_usuarios WHERE cedula = ?",
-      [cedulaNormalizada]
+      "SELECT id_registro FROM registro_usuarios WHERE pais = ? AND tipo_documento = ? AND cedula = ?",
+      [paisVal, tipoDocVal, cedulaNormalizada]
     );
     if (docExistente.length > 0) {
-      return res.status(400).json({ status: "ERROR", mensaje: "Este número de documento ya está registrado." });
+      return res.status(400).json({
+        status: "ERROR",
+        mensaje: `Ya existe una cuenta registrada con este documento (${paisVal} - ${tipoDocVal} - ${cedulaNormalizada}).`
+      });
     }
 
     // 5. Validar teléfono internacional
@@ -997,3 +1008,6 @@ exports.googleRegister = async (req, res) => {
 
 // Mantener googleAuth como alias de googleLogin para compatibilidad
 exports.googleAuth = exports.googleLogin;
+
+// Exportar helper de validación de documento para pruebas
+exports.validarDocumento = validarDocumento;

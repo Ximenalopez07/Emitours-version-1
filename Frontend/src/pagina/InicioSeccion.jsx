@@ -12,68 +12,152 @@ import { getAllCountries } from "../utils/countryData";
 import PhoneInput from "../components/PhoneInput";
 import logo from "../assets/logo.jpg";
 
+// Helper para sanitizar en caliente el número de documento según el tipo seleccionado
+function sanitizarNumeroDocumento(tipoDoc, rawVal) {
+  if (!rawVal || typeof rawVal !== "string") return "";
+  const tipo = (tipoDoc || "").toLowerCase();
+  // Quitar espacios
+  let val = rawVal.replace(/\s+/g, "");
+
+  if (tipo.includes("ciudadanía") || tipo.includes("ciudadania")) {
+    // Permitir únicamente números, máximo 10 dígitos
+    return val.replace(/\D/g, "").slice(0, 10);
+  } else if (tipo.includes("extranjería") || tipo.includes("extranjeria")) {
+    // Permitir únicamente números, máximo 12 dígitos
+    return val.replace(/\D/g, "").slice(0, 12);
+  } else if (tipo.includes("pasaporte") || tipo.includes("passport")) {
+    // Permitir letras y números, convertir a mayúsculas, máximo 20 caracteres
+    return val.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 20);
+  }
+  return val.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 20);
+}
+
+// Configuración de límites y atributos de input por tipo de documento
+function obtenerConfigDocumento(tipoDoc, language) {
+  const tipo = (tipoDoc || "").toLowerCase();
+  if (tipo.includes("ciudadanía") || tipo.includes("ciudadania")) {
+    return {
+      maxLength: 10,
+      inputMode: "numeric",
+      placeholder: language === "en" ? "Ex: 1020304050 (6 to 10 digits)" : "Ej: 1020304050 (6 a 10 dígitos)"
+    };
+  }
+  if (tipo.includes("extranjería") || tipo.includes("extranjeria")) {
+    return {
+      maxLength: 12,
+      inputMode: "numeric",
+      placeholder: language === "en" ? "Ex: 123456789012 (6 to 12 digits)" : "Ej: 123456789012 (6 a 12 dígitos)"
+    };
+  }
+  // Pasaporte
+  return {
+    maxLength: 20,
+    inputMode: "text",
+    placeholder: language === "en" ? "Ex: PAS123456 (6 to 20 characters)" : "Ej: PAS123456 (6 a 20 caracteres)"
+  };
+}
+
 // Helper frontend de validación de documento según País + Tipo + Número
 function validarDocumentoFrontend(pais, tipoDocumento, numero, t, language) {
   if (!numero || typeof numero !== "string" || !numero.trim()) {
     return { valido: false, mensaje: t?.auth_err_doc_req || "El número de documento es obligatorio." };
   }
-  if (numero.includes(" ")) {
+  if (numero.includes(" ") || /\s/.test(numero)) {
     return { valido: false, mensaje: t?.auth_err_doc_nospaces || "El número de documento no puede contener espacios." };
   }
 
-  const paisNorm = (pais || "Colombia").trim().toLowerCase();
   const tipoNorm = (tipoDocumento || "Cédula de ciudadanía").trim().toLowerCase();
   const numClean = numero.trim();
 
-  if (paisNorm === "colombia") {
-    if (tipoNorm.includes("ciudadanía") || tipoNorm.includes("ciudadania")) {
-      if (!/^\d{6,10}$/.test(numClean)) {
-        return {
-          valido: false,
-          mensaje: language === "en" ? "Citizenship ID must contain 6 to 10 digits without letters." : "La cédula de ciudadanía debe contener entre 6 y 10 dígitos numéricos sin letras."
-        };
-      }
-      if (/^(\d)\1+$/.test(numClean)) {
-        return { valido: false, mensaje: language === "en" ? "The ID number entered is invalid." : "El número de cédula ingresado no es válido." };
-      }
-      return { valido: true, numeroNormalizado: numClean };
-    } else if (tipoNorm.includes("extranjería") || tipoNorm.includes("extranjeria")) {
-      if (!/^[A-Za-z0-9]{6,10}$/.test(numClean)) {
-        return {
-          valido: false,
-          mensaje: language === "en" ? "Foreign ID must contain 6 to 10 alphanumeric characters." : "La cédula de extranjería debe contener entre 6 y 10 caracteres alfanuméricos."
-        };
-      }
-      return { valido: true, numeroNormalizado: numClean.toUpperCase() };
-    } else if (tipoNorm.includes("pasaporte") || tipoNorm.includes("passport")) {
-      if (!/^[A-Za-z0-9]{6,15}$/.test(numClean)) {
-        return {
-          valido: false,
-          mensaje: language === "en" ? "Passport must contain 6 to 15 alphanumeric characters." : "El pasaporte debe contener entre 6 y 15 caracteres alfanuméricos."
-        };
-      }
-      return { valido: true, numeroNormalizado: numClean.toUpperCase() };
+  // 1. Cédula de ciudadanía: solo números, 6 a 10 dígitos
+  if (tipoNorm.includes("ciudadanía") || tipoNorm.includes("ciudadania")) {
+    if (!/^\d+$/.test(numClean)) {
+      return {
+        valido: false,
+        mensaje: language === "en"
+          ? "Citizenship ID must contain only numbers (no letters or special characters)."
+          : "La cédula de ciudadanía debe contener únicamente números (sin letras, espacios ni caracteres especiales)."
+      };
     }
+    if (numClean.length < 6 || numClean.length > 10) {
+      return {
+        valido: false,
+        mensaje: language === "en"
+          ? (t?.error_doc_cedula_colombia || "Citizenship ID must contain between 6 and 10 digits.")
+          : (t?.error_doc_cedula_colombia || "La cédula de ciudadanía debe contener entre 6 y 10 dígitos numéricos.")
+      };
+    }
+    if (/^(\d)\1+$/.test(numClean)) {
+      return {
+        valido: false,
+        mensaje: language === "en"
+          ? (t?.error_doc_cedula_invalida || "The entered document number is invalid.")
+          : (t?.error_doc_cedula_invalida || "El número de documento ingresado no es válido.")
+      };
+    }
+    return { valido: true, numeroNormalizado: numClean };
   }
 
-  // Otros países
-  if (tipoNorm.includes("pasaporte") || tipoNorm.includes("passport")) {
-    if (!/^[A-Za-z0-9]{6,15}$/.test(numClean)) {
+  // 2. Cédula de extranjería: solo números, 6 a 12 dígitos
+  if (tipoNorm.includes("extranjería") || tipoNorm.includes("extranjeria")) {
+    if (!/^\d+$/.test(numClean)) {
       return {
         valido: false,
-        mensaje: language === "en" ? "International passport must contain 6 to 15 alphanumeric characters." : "El pasaporte internacional debe contener entre 6 y 15 caracteres alfanuméricos."
+        mensaje: language === "en"
+          ? "Foreigner ID must contain only numbers (no letters or special characters)."
+          : "La cédula de extranjería debe contener únicamente números (sin letras, espacios ni caracteres especiales)."
       };
     }
-    return { valido: true, numeroNormalizado: numClean.toUpperCase() };
-  } else {
-    if (!/^[A-Za-z0-9\-]{5,20}$/.test(numClean)) {
+    if (numClean.length < 6 || numClean.length > 12) {
       return {
         valido: false,
-        mensaje: language === "en" ? "Identity document must contain 5 to 20 characters without spaces." : "El documento de identificación debe contener entre 5 y 20 caracteres sin espacios."
+        mensaje: language === "en"
+          ? (t?.error_doc_extranjeria || "Foreigner ID must contain between 6 and 12 digits.")
+          : (t?.error_doc_extranjeria || "La cédula de extranjería debe contener entre 6 y 12 dígitos numéricos.")
+      };
+    }
+    if (/^(\d)\1+$/.test(numClean)) {
+      return {
+        valido: false,
+        mensaje: language === "en"
+          ? (t?.error_doc_cedula_invalida || "The entered document number is invalid.")
+          : (t?.error_doc_cedula_invalida || "El número de documento ingresado no es válido.")
+      };
+    }
+    return { valido: true, numeroNormalizado: numClean };
+  }
+
+  // 3. Pasaporte: letras y números, 6 a 20 caracteres, mayúsculas, sin espacios ni símbolos
+  if (tipoNorm.includes("pasaporte") || tipoNorm.includes("passport")) {
+    if (!/^[A-Za-z0-9]+$/.test(numClean)) {
+      return {
+        valido: false,
+        mensaje: language === "en"
+          ? "Passport must contain only letters and numbers without spaces or special symbols."
+          : "El pasaporte debe contener únicamente letras y números (sin espacios ni símbolos especiales)."
+      };
+    }
+    if (numClean.length < 6 || numClean.length > 20) {
+      return {
+        valido: false,
+        mensaje: language === "en"
+          ? (t?.error_doc_pasaporte || "Passport must contain between 6 and 20 characters.")
+          : (t?.error_doc_pasaporte || "El pasaporte debe contener entre 6 y 20 caracteres alfanuméricos.")
       };
     }
     return { valido: true, numeroNormalizado: numClean.toUpperCase() };
   }
+
+  // 4. Otros documentos (compatibilidad)
+  if (!/^[A-Za-z0-9]{6,20}$/.test(numClean)) {
+    return {
+      valido: false,
+      mensaje: language === "en"
+        ? (t?.error_doc_dni || "Document must contain 6 to 20 characters without spaces or symbols.")
+        : (t?.error_doc_dni || "El documento debe contener entre 6 y 20 caracteres sin espacios ni símbolos especiales.")
+    };
+  }
+  return { valido: true, numeroNormalizado: numClean.toUpperCase() };
 }
 
 function InicioSeccion() {
@@ -120,14 +204,67 @@ function InicioSeccion() {
   const selectedCountryObj =
     countries.find((c) => c.iso === selectedCountryIso) || countries[0];
 
+  // Configuración de límites y formato según el tipo de documento actual
+  const docConfig = obtenerConfigDocumento(tipoDocumento, language);
+
+  // Manejar cambio de tipo de documento: sanitizar y re-validar inmediatamente
+  const handleCambioTipoDocumento = (nuevoTipo) => {
+    setTipoDocumento(nuevoTipo);
+    if (!cedula) {
+      setErroresFormulario((prev) => ({ ...prev, cedula: null }));
+      return;
+    }
+    const sanitizado = sanitizarNumeroDocumento(nuevoTipo, cedula);
+    setCedula(sanitizado);
+
+    if (sanitizado) {
+      const paisNombre = selectedCountryObj?.name || "Colombia";
+      const res = validarDocumentoFrontend(paisNombre, nuevoTipo, sanitizado, t, language);
+      setErroresFormulario((prev) => ({
+        ...prev,
+        cedula: res.valido ? null : res.mensaje
+      }));
+    } else {
+      setErroresFormulario((prev) => ({ ...prev, cedula: null }));
+    }
+  };
+
+  // Manejar cambio en el número de documento: filtrar caracteres no permitidos en tiempo real
+  const handleCambioCedula = (e) => {
+    const sanitizado = sanitizarNumeroDocumento(tipoDocumento, e.target.value);
+    setCedula(sanitizado);
+
+    if (!sanitizado) {
+      setErroresFormulario((prev) => ({ ...prev, cedula: null }));
+      return;
+    }
+
+    const paisNombre = selectedCountryObj?.name || "Colombia";
+    const res = validarDocumentoFrontend(paisNombre, tipoDocumento, sanitizado, t, language);
+    if (res.valido) {
+      setErroresFormulario((prev) => ({ ...prev, cedula: null }));
+    } else {
+      setErroresFormulario((prev) => ({ ...prev, cedula: res.mensaje }));
+    }
+  };
+
   // Adaptar tipo de documento según el país seleccionado
   useEffect(() => {
-    if (selectedCountryIso === "CO") {
-      setTipoDocumento("Cédula de ciudadanía");
+    const nuevoTipo = selectedCountryIso === "CO" ? "Cédula de ciudadanía" : "Pasaporte";
+    setTipoDocumento(nuevoTipo);
+    if (cedula) {
+      const sanitizado = sanitizarNumeroDocumento(nuevoTipo, cedula);
+      setCedula(sanitizado);
+      if (sanitizado) {
+        const paisNombre = selectedCountryObj?.name || "Colombia";
+        const res = validarDocumentoFrontend(paisNombre, nuevoTipo, sanitizado, t, language);
+        setErroresFormulario((prev) => ({ ...prev, cedula: res.valido ? null : res.mensaje }));
+      } else {
+        setErroresFormulario((prev) => ({ ...prev, cedula: null }));
+      }
     } else {
-      setTipoDocumento("Pasaporte");
+      setErroresFormulario((prev) => ({ ...prev, cedula: null }));
     }
-    setErroresFormulario((prev) => ({ ...prev, cedula: null }));
   }, [selectedCountryIso]);
 
   // Cambiar entre vista de Login y Registro
@@ -755,23 +892,12 @@ function InicioSeccion() {
                 <label className="auth-label">{t?.auth_lbl_doctype || "TIPO DE DOCUMENTO *"}</label>
                 <select
                   value={tipoDocumento}
-                  onChange={(e) => setTipoDocumento(e.target.value)}
+                  onChange={(e) => handleCambioTipoDocumento(e.target.value)}
                   className="auth-select"
                 >
-                  {selectedCountryIso === "CO" ? (
-                    <>
-                      <option value="Cédula de ciudadanía">{t?.doc_cedula_ciudadania || "Cédula de ciudadanía"}</option>
-                      <option value="Cédula de extranjería">{t?.doc_cedula_extranjeria || "Cédula de extranjería"}</option>
-                      <option value="Pasaporte">{t?.doc_pasaporte || "Pasaporte"}</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="Pasaporte">{t?.doc_pasaporte || "Pasaporte"}</option>
-                      <option value="Documento Nacional de Identidad / Cédula">
-                        {t?.doc_dni_otro || "Documento Nacional de Identidad / Cédula"}
-                      </option>
-                    </>
-                  )}
+                  <option value="Cédula de ciudadanía">{t?.doc_cedula_ciudadania || "Cédula de ciudadanía"}</option>
+                  <option value="Cédula de extranjería">{t?.doc_cedula_extranjeria || "Cédula de extranjería"}</option>
+                  <option value="Pasaporte">{t?.doc_pasaporte || "Pasaporte"}</option>
                 </select>
               </div>
 
@@ -780,16 +906,24 @@ function InicioSeccion() {
                 <label className="auth-label">{t?.auth_lbl_docnum || "NÚMERO DE DOCUMENTO *"}</label>
                 <input
                   type="text"
-                  placeholder={
-                    selectedCountryIso === "CO" && tipoDocumento.includes("ciudadanía")
-                      ? (language === "en" ? "Ex: 1020304050" : "Ej: 1020304050")
-                      : (language === "en" ? "Ex: AB123456" : "Ej: AB123456")
-                  }
+                  inputMode={docConfig.inputMode}
+                  maxLength={docConfig.maxLength}
+                  placeholder={docConfig.placeholder}
                   value={cedula}
-                  onChange={(e) => {
-                    setCedula(e.target.value);
-                    if (erroresFormulario.cedula) {
-                      setErroresFormulario((prev) => ({ ...prev, cedula: null }));
+                  onChange={handleCambioCedula}
+                  onBlur={() => {
+                    if (!cedula.trim()) {
+                      setErroresFormulario((prev) => ({
+                        ...prev,
+                        cedula: t?.auth_err_doc_req || "El número de documento es obligatorio."
+                      }));
+                    } else {
+                      const paisNombre = selectedCountryObj?.name || "Colombia";
+                      const res = validarDocumentoFrontend(paisNombre, tipoDocumento, cedula, t, language);
+                      setErroresFormulario((prev) => ({
+                        ...prev,
+                        cedula: res.valido ? null : res.mensaje
+                      }));
                     }
                   }}
                   className={`auth-input ${erroresFormulario.cedula ? "input-has-error" : ""}`}
