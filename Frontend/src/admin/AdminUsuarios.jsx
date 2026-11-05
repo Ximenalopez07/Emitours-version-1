@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getAdminUsuarios, updateAdminUsuario, deleteAdminUsuario } from '../api';
+import { getAdminUsuarios, createAdminUsuario, updateAdminUsuario, deleteAdminUsuario } from '../api';
 import {
   FaFileExcel,
   FaFilePdf,
@@ -10,11 +10,13 @@ import {
   FaEye,
   FaUserCircle,
   FaCheckCircle,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaPlus
 } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { resolveUserPhoto, DEFAULT_USER_AVATAR } from '../utils/assetHelper';
 import './AdminUsuarios.css';
 
 export default function AdminUsuarios() {
@@ -31,10 +33,47 @@ export default function AdminUsuarios() {
   }, [searchParams]);
 
   // Modales
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    nombre_usuario: '',
+    correo_electronico: '',
+    tipo_documento: 'Cédula de ciudadanía',
+    cedula: '',
+    pais: 'Colombia',
+    telefono: '',
+    edad: 18,
+    contrasena: ''
+  });
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
   const [alertMsg, setAlertMsg] = useState('');
+
+  const handleOpenCreate = () => {
+    setCreateFormData({
+      nombre_usuario: '',
+      correo_electronico: '',
+      tipo_documento: 'Cédula de ciudadanía',
+      cedula: '',
+      pais: 'Colombia',
+      telefono: '',
+      edad: 18,
+      contrasena: ''
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await createAdminUsuario(createFormData);
+      showNotification(res.data?.mensaje || '✅ Usuario registrado exitosamente');
+      setShowCreateModal(false);
+      fetchUsuarios();
+    } catch (err) {
+      alert(err.response?.data?.mensaje || 'Error al registrar el usuario');
+    }
+  };
 
   useEffect(() => {
     fetchUsuarios();
@@ -164,6 +203,9 @@ export default function AdminUsuarios() {
           <button className="btn-export-file pdf" onClick={exportPDF}>
             <FaFilePdf /> Exportar PDF
           </button>
+          <button className="btn-primary-action" onClick={handleOpenCreate}>
+            <FaPlus /> Nuevo Usuario
+          </button>
         </div>
       </div>
 
@@ -221,9 +263,14 @@ export default function AdminUsuarios() {
                     <td>
                       <div className="user-cell-info">
                         <img
-                          src={u.foto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=120"}
-                          alt="Avatar"
+                          src={resolveUserPhoto(u.foto, u.nombre_usuario)}
+                          alt={u.nombre_usuario || "Avatar"}
                           className="table-avatar-img"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = DEFAULT_USER_AVATAR;
+                          }}
                         />
                         <div>
                           <span className="user-cell-name">{u.nombre_usuario}</span>
@@ -283,9 +330,14 @@ export default function AdminUsuarios() {
             <div className="detail-modal-header">
               <div className="detail-avatar-container">
                 <img
-                  src={selectedUserDetail.foto || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200"}
-                  alt="Avatar"
+                  src={resolveUserPhoto(selectedUserDetail.foto, selectedUserDetail.nombre_usuario)}
+                  alt={selectedUserDetail.nombre_usuario || "Avatar"}
                   className="detail-avatar-lg"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_USER_AVATAR;
+                  }}
                 />
               </div>
               <div className="detail-title-info">
@@ -296,8 +348,16 @@ export default function AdminUsuarios() {
 
             <div className="detail-grid-data">
               <div className="detail-field">
-                <label>Cédula / Documento</label>
+                <label>Tipo de Documento</label>
+                <p>{selectedUserDetail.tipo_documento || 'Cédula de ciudadanía'}</p>
+              </div>
+              <div className="detail-field">
+                <label>Número de Documento</label>
                 <p>{selectedUserDetail.cedula || 'No especificado'}</p>
+              </div>
+              <div className="detail-field">
+                <label>País de Origen</label>
+                <p>{selectedUserDetail.pais || 'Colombia'}</p>
               </div>
               <div className="detail-field">
                 <label>Correo Electrónico</label>
@@ -358,12 +418,34 @@ export default function AdminUsuarios() {
 
               <div className="form-group-row">
                 <div className="form-group-field">
-                  <label>Cédula / Documento</label>
+                  <label>Tipo de Documento</label>
+                  <select
+                    value={editingUser.tipo_documento || 'Cédula de ciudadanía'}
+                    onChange={(e) => setEditingUser({ ...editingUser, tipo_documento: e.target.value })}
+                  >
+                    <option value="Cédula de ciudadanía">Cédula de ciudadanía</option>
+                    <option value="Cédula de extranjería">Cédula de extranjería</option>
+                    <option value="Pasaporte">Pasaporte</option>
+                  </select>
+                </div>
+                <div className="form-group-field">
+                  <label>Número de Documento</label>
                   <input
                     type="text"
                     required
                     value={editingUser.cedula || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, cedula: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>País</label>
+                  <input
+                    type="text"
+                    value={editingUser.pais || 'Colombia'}
+                    onChange={(e) => setEditingUser({ ...editingUser, pais: e.target.value })}
                   />
                 </div>
                 <div className="form-group-field">
@@ -376,25 +458,26 @@ export default function AdminUsuarios() {
                 </div>
               </div>
 
-              <div className="form-group-field">
-                <label>Correo Electrónico</label>
-                <input
-                  type="email"
-                  required
-                  value={editingUser.correo_electronico || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, correo_electronico: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group-field">
-                <label>Edad</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="120"
-                  value={editingUser.edad || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, edad: e.target.value })}
-                />
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>Correo Electrónico</label>
+                  <input
+                    type="email"
+                    required
+                    value={editingUser.correo_electronico || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, correo_electronico: e.target.value })}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label>Edad</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={editingUser.edad || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, edad: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="modal-actions-end">
@@ -439,6 +522,138 @@ export default function AdminUsuarios() {
                 Sí, Eliminar Usuario
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: CREAR NUEVO USUARIO (ADMINISTRATIVO) */}
+      {showCreateModal && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal-card">
+            <h3>Registrar Nuevo Usuario</h3>
+            <p className="modal-subtitle">Ingresa la información personal del nuevo cliente de EmiTours</p>
+
+            <form onSubmit={handleCreateSubmit} className="admin-modal-form">
+              <div className="form-group-field">
+                <label>Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Laura Gómez"
+                  value={createFormData.nombre_usuario}
+                  onChange={(e) => setCreateFormData({ ...createFormData, nombre_usuario: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>Tipo de Documento *</label>
+                  <select
+                    value={createFormData.tipo_documento}
+                    onChange={(e) => {
+                      const newTipo = e.target.value;
+                      let sanitizedCed = createFormData.cedula;
+                      if (newTipo === 'Pasaporte') {
+                        sanitizedCed = sanitizedCed.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 20);
+                      } else {
+                        sanitizedCed = sanitizedCed.replace(/\D/g, '').slice(0, newTipo === 'Cédula de extranjería' ? 12 : 10);
+                      }
+                      setCreateFormData({ ...createFormData, tipo_documento: newTipo, cedula: sanitizedCed });
+                    }}
+                  >
+                    <option value="Cédula de ciudadanía">Cédula de ciudadanía</option>
+                    <option value="Cédula de extranjería">Cédula de extranjería</option>
+                    <option value="Pasaporte">Pasaporte</option>
+                  </select>
+                </div>
+
+                <div className="form-group-field">
+                  <label>Número de Documento *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={createFormData.tipo_documento === 'Pasaporte' ? 'Ej: A12345678' : 'Ej: 1087998487'}
+                    value={createFormData.cedula}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      if (createFormData.tipo_documento === 'Pasaporte') {
+                        val = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 20);
+                      } else {
+                        val = val.replace(/\D/g, '').slice(0, createFormData.tipo_documento === 'Cédula de extranjería' ? 12 : 10);
+                      }
+                      setCreateFormData({ ...createFormData, cedula: val });
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>País</label>
+                  <input
+                    type="text"
+                    placeholder="Colombia"
+                    value={createFormData.pais}
+                    onChange={(e) => setCreateFormData({ ...createFormData, pais: e.target.value })}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label>Teléfono</label>
+                  <input
+                    type="text"
+                    placeholder="+573001234567"
+                    value={createFormData.telefono}
+                    onChange={(e) => setCreateFormData({ ...createFormData, telefono: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>Correo Electrónico *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="cliente@ejemplo.com"
+                    value={createFormData.correo_electronico}
+                    onChange={(e) => setCreateFormData({ ...createFormData, correo_electronico: e.target.value })}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label>Edad</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={createFormData.edad}
+                    onChange={(e) => setCreateFormData({ ...createFormData, edad: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group-field">
+                <label>Contraseña Inicial (Opcional, por defecto: Usuario123*)</label>
+                <input
+                  type="password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={createFormData.contrasena}
+                  onChange={(e) => setCreateFormData({ ...createFormData, contrasena: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-actions-end">
+                <button
+                  type="button"
+                  className="btn-secondary-action"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary-action">
+                  <FaPlus /> Registrar Usuario
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

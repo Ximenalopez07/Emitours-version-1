@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getAdminConfiguracion, updateAdminConfiguracion } from '../api';
-import { FaSave, FaCheckCircle, FaSlidersH } from 'react-icons/fa';
+import { FaSave, FaCheckCircle, FaSlidersH, FaUserShield, FaArrowRight } from 'react-icons/fa';
 import './AdminUsuarios.css';
 
 export default function AdminConfiguracion() {
@@ -51,7 +52,8 @@ export default function AdminConfiguracion() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+        {/* TARJETA 1: PARÁMETROS DEL SITIO */}
         <div className="admin-modal-card" style={{ maxWidth: '640px', width: '100%', margin: 0 }}>
           <form onSubmit={handleSubmit} className="admin-modal-form">
             <div className="form-group-field">
@@ -102,6 +104,55 @@ export default function AdminConfiguracion() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* TARJETA 2: GESTIÓN DE ADMINISTRADORES */}
+        <div className="admin-modal-card" style={{ maxWidth: '640px', width: '100%', margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
+            <div style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              backgroundColor: '#e0f2fe',
+              color: '#0284c7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '22px'
+            }}>
+              <FaUserShield />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+                Gestión de administradores
+              </h3>
+              <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                Control y administración del personal con acceso de administrador
+              </p>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '13.5px', color: '#475569', lineHeight: '1.5', margin: '0 0 18px 0' }}>
+            Consulta el equipo administrativo activo, registra nuevos administradores del sistema, actualiza credenciales o remueve cuentas con total seguridad.
+          </p>
+
+          <Link
+            to="/admin/administradores"
+            className="btn-primary-action"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              textDecoration: 'none',
+              padding: '12px 22px',
+              fontWeight: '700',
+              borderRadius: '10px',
+              width: '100%'
+            }}
+          >
+            <FaUserShield /> Abrir Gestión de Administradores <FaArrowRight style={{ fontSize: '12px' }} />
+          </Link>
         </div>
       </div>
     </div>

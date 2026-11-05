@@ -20,10 +20,10 @@ exports.verifyAdminToken = (req, res, next) => {
   }
 };
 
-// Middleware para verificar rol de Super Administrador
+// Middleware para verificar rol de Administrador (mantenido por compatibilidad)
 exports.requireSuperAdmin = (req, res, next) => {
-  if (!req.admin || req.admin.rol !== 'Super Administrador') {
-    return res.status(403).json({ status: 'ERROR', mensaje: 'Permiso denegado. Se requiere rol de Super Administrador.' });
+  if (!req.admin || (req.admin.rol !== 'admin' && req.admin.rol !== 'Super Administrador')) {
+    return res.status(403).json({ status: 'ERROR', mensaje: 'Permiso denegado. Se requiere rol de Administrador.' });
   }
   next();
 };

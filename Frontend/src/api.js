@@ -45,6 +45,7 @@ export const adminVerifySession = () => api.get('/admin/auth/verify');
 export const getAdminStats = () => api.get('/admin/stats');
 
 export const getAdminUsuarios = () => api.get('/admin/usuarios');
+export const createAdminUsuario = (data) => api.post('/admin/usuarios', data);
 export const updateAdminUsuario = (id, data) => api.put(`/admin/usuarios/${id}`, data);
 export const deleteAdminUsuario = (id) => api.delete(`/admin/usuarios/${id}`);
 
@@ -69,6 +70,7 @@ export const updateAdminCategoria = (id, data) => api.put(`/admin/categorias/${i
 export const deleteAdminCategoria = (id) => api.delete(`/admin/categorias/${id}`);
 
 export const getAdminReservas = () => api.get('/admin/reservas');
+export const createAdminReserva = (data) => api.post('/admin/reservas', data);
 export const updateAdminReservaStatus = (id, data) => api.put(`/admin/reservas/${id}/estado`, data);
 export const updateAdminReserva = (id, data) => api.put(`/admin/reservas/${id}`, data);
 export const deleteAdminReserva = (id) => api.delete(`/admin/reservas/${id}`);

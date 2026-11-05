@@ -487,18 +487,31 @@ exports.update = (req, res) => {
 exports.delete = (req, res) => {
   const { id } = req.params;
 
-  db.query("DELETE FROM reservas WHERE usuario_id = ?", [id], (errReservas) => {
-    if (errReservas) {
-      console.error("Error al eliminar reservas del usuario:", errReservas);
-      return res.status(500).json({ status: "ERROR", mensaje: "Ha ocurrido un error. Inténtalo nuevamente." });
+  // Proteger cuentas de administrador para evitar dejar el sistema sin acceso administrativo
+  db.query("SELECT rol FROM registro_usuarios WHERE id_registro = ?", [id], (errCheck, rows) => {
+    if (errCheck) return res.status(500).json({ status: "ERROR", mensaje: "Error al verificar cuenta de usuario." });
+    if (!rows || rows.length === 0) return res.status(404).json({ status: "ERROR", mensaje: "Usuario no encontrado." });
+
+    if (rows[0].rol === 'admin') {
+      return res.status(403).json({
+        status: "ERROR",
+        mensaje: "Las cuentas de Administrador no pueden ser eliminadas desde el perfil de usuario para proteger el acceso al sistema."
+      });
     }
 
-    db.query("DELETE FROM registro_usuarios WHERE id_registro = ?", [id], (err) => {
-      if (err) {
-        console.error("Error al eliminar usuario:", err);
+    db.query("DELETE FROM reservas WHERE usuario_id = ?", [id], (errReservas) => {
+      if (errReservas) {
+        console.error("Error al eliminar reservas del usuario:", errReservas);
         return res.status(500).json({ status: "ERROR", mensaje: "Ha ocurrido un error. Inténtalo nuevamente." });
       }
-      res.json({ status: "OK", mensaje: "Usuario eliminado exitosamente" });
+
+      db.query("DELETE FROM registro_usuarios WHERE id_registro = ?", [id], (err) => {
+        if (err) {
+          console.error("Error al eliminar usuario:", err);
+          return res.status(500).json({ status: "ERROR", mensaje: "Ha ocurrido un error. Inténtalo nuevamente." });
+        }
+        res.json({ status: "OK", mensaje: "Usuario eliminado exitosamente" });
+      });
     });
   });
 };
@@ -581,7 +594,7 @@ exports.login = (req, res) => {
     // Generar JWT según el rol real registrado en la base de datos
     if (user.rol === 'admin') {
       const token = jwt.sign(
-        { id: user.id_registro, correo: user.correo_electronico, rol: 'Super Administrador', nombre: user.nombre_usuario },
+        { id: user.id_registro, correo: user.correo_electronico, rol: 'admin', nombre: user.nombre_usuario },
         JWT_SECRET,
         { expiresIn: '12h' }
       );
@@ -601,7 +614,7 @@ exports.login = (req, res) => {
           id: user.id_registro,
           nombre: user.nombre_usuario,
           correo: user.correo_electronico,
-          rol: 'Super Administrador',
+          rol: 'admin',
           estado: 'Activo'
         }
       });
@@ -712,7 +725,7 @@ async function verifyGoogleToken(tokenToVerify) {
 function responderSesionUsuario(user, res, fallbackFoto) {
   if (user.rol === 'admin') {
     const token = jwt.sign(
-      { id: user.id_registro, correo: user.correo_electronico, rol: 'Super Administrador', nombre: user.nombre_usuario },
+      { id: user.id_registro, correo: user.correo_electronico, rol: 'admin', nombre: user.nombre_usuario },
       JWT_SECRET,
       { expiresIn: '12h' }
     );
@@ -734,7 +747,7 @@ function responderSesionUsuario(user, res, fallbackFoto) {
         id: user.id_registro,
         nombre: user.nombre_usuario,
         correo: user.correo_electronico,
-        rol: 'Super Administrador',
+        rol: 'admin',
         estado: 'Activo'
       }
     });

@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 // ================= GESTIÓN DE USUARIOS (CLIENTES) =================
 exports.getUsuarios = (req, res) => {
   db.query(
-    "SELECT id_registro, nombre_usuario, edad, cedula, correo_electronico, telefono, foto, rol, 'Activo' as estado, CURRENT_TIMESTAMP as fecha_registro FROM registro_usuarios WHERE rol != 'admin' OR rol IS NULL ORDER BY id_registro DESC",
+    "SELECT id_registro, nombre_usuario, edad, pais, tipo_documento, cedula, correo_electronico, telefono, foto, rol, 'Activo' as estado, CURRENT_TIMESTAMP as fecha_registro FROM registro_usuarios WHERE rol != 'admin' OR rol IS NULL ORDER BY id_registro DESC",
     (err, result) => {
       if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
       res.json(result);
@@ -12,11 +12,76 @@ exports.getUsuarios = (req, res) => {
   );
 };
 
+exports.createUsuarioAdmin = async (req, res) => {
+  const { nombre_usuario, correo_electronico, cedula, tipo_documento, pais, telefono, edad, contrasena } = req.body;
+
+  if (!nombre_usuario || !correo_electronico || !cedula) {
+    return res.status(400).json({
+      status: 'ERROR',
+      mensaje: 'El nombre, correo electrónico y número de documento son obligatorios.'
+    });
+  }
+
+  const cleanCorreo = String(correo_electronico).trim().toLowerCase();
+  const cleanDoc = String(cedula).trim();
+  const tipoDocVal = tipo_documento || 'Cédula de ciudadanía';
+  const paisVal = pais || 'Colombia';
+
+  try {
+    // 1. Verificar correo duplicado
+    db.query("SELECT id_registro FROM registro_usuarios WHERE correo_electronico = ?", [cleanCorreo], async (errCorreo, rowsCorreo) => {
+      if (errCorreo) return res.status(500).json({ status: 'ERROR', mensaje: errCorreo.message });
+      if (rowsCorreo && rowsCorreo.length > 0) {
+        return res.status(400).json({ status: 'ERROR', mensaje: 'Ya existe un usuario registrado con este correo electrónico.' });
+      }
+
+      // 2. Verificar documento duplicado
+      db.query("SELECT id_registro FROM registro_usuarios WHERE pais = ? AND tipo_documento = ? AND cedula = ?", [paisVal, tipoDocVal, cleanDoc], async (errDoc, rowsDoc) => {
+        if (errDoc) return res.status(500).json({ status: 'ERROR', mensaje: errDoc.message });
+        if (rowsDoc && rowsDoc.length > 0) {
+          return res.status(400).json({ status: 'ERROR', mensaje: `Ya existe un usuario con este documento (${paisVal} - ${tipoDocVal} - ${cleanDoc}).` });
+        }
+
+        // 3. Hashear contraseña
+        const rawPass = contrasena && contrasena.trim() !== '' ? contrasena.trim() : 'Usuario123*';
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(rawPass, salt);
+
+        const sqlInsert = `
+          INSERT INTO registro_usuarios 
+          (nombre_usuario, edad, pais, tipo_documento, cedula, correo_electronico, contrasena, telefono, rol, email_verificado)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'usuario', 1)
+        `;
+
+        db.query(sqlInsert, [
+          nombre_usuario.trim(),
+          parseInt(edad, 10) || 18,
+          paisVal,
+          tipoDocVal,
+          cleanDoc,
+          cleanCorreo,
+          hashedPassword,
+          telefono ? String(telefono).trim() : null
+        ], (errInsert, result) => {
+          if (errInsert) return res.status(500).json({ status: 'ERROR', mensaje: errInsert.sqlMessage || errInsert.message });
+          res.json({
+            status: 'OK',
+            mensaje: 'Usuario registrado exitosamente en el sistema',
+            id: result.insertId
+          });
+        });
+      });
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'ERROR', mensaje: err.message });
+  }
+};
+
 exports.updateUsuarioAdmin = (req, res) => {
   const { id } = req.params;
-  const { nombre_usuario, edad, cedula, correo_electronico, telefono, foto } = req.body;
-  const sql = "UPDATE registro_usuarios SET nombre_usuario=?, edad=?, cedula=?, correo_electronico=?, telefono=?, foto=? WHERE id_registro=?";
-  db.query(sql, [nombre_usuario, edad || 18, cedula, correo_electronico, telefono, foto, id], (err) => {
+  const { nombre_usuario, edad, cedula, correo_electronico, telefono, foto, pais, tipo_documento } = req.body;
+  const sql = "UPDATE registro_usuarios SET nombre_usuario=?, edad=?, cedula=?, correo_electronico=?, telefono=?, foto=?, pais=COALESCE(?, pais), tipo_documento=COALESCE(?, tipo_documento) WHERE id_registro=?";
+  db.query(sql, [nombre_usuario, edad || 18, cedula, correo_electronico, telefono, foto, pais || null, tipo_documento || null, id], (err) => {
     if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
     res.json({ status: 'OK', mensaje: "Usuario actualizado correctamente por el administrador" });
   });
@@ -56,16 +121,41 @@ exports.getAdministradores = (req, res) => {
 };
 
 exports.createAdministrador = async (req, res) => {
-  const { nombre, correo, contrasena, telefono, cedula } = req.body;
-  try {
-    const rawPass = contrasena || 'Admin123*';
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(rawPass, salt);
+  const { nombre, apellido, correo, contrasena, telefono, cedula, documento } = req.body;
 
-    const sql = "INSERT INTO registro_usuarios (nombre_usuario, edad, cedula, correo_electronico, contrasena, telefono, rol) VALUES (?, 30, ?, ?, ?, ?, 'admin')";
-    db.query(sql, [nombre, cedula || String(Date.now()), correo, hashedPassword, telefono], (err, result) => {
-      if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
-      res.json({ status: 'OK', mensaje: "Administrador creado exitosamente", id: result.insertId });
+  if (!nombre || !correo) {
+    return res.status(400).json({ status: 'ERROR', mensaje: 'El nombre y correo electrónico son obligatorios.' });
+  }
+
+  const cleanCorreo = String(correo).trim().toLowerCase();
+  const cleanNombre = apellido && apellido.trim() !== '' 
+    ? `${String(nombre).trim()} ${String(apellido).trim()}` 
+    : String(nombre).trim();
+  const cleanDoc = cedula || documento || String(Date.now()).slice(-8);
+
+  try {
+    // 1. Verificar correo duplicado
+    db.query("SELECT id_registro FROM registro_usuarios WHERE correo_electronico = ?", [cleanCorreo], async (errCheck, rowsCheck) => {
+      if (errCheck) return res.status(500).json({ status: 'ERROR', mensaje: errCheck.message });
+      if (rowsCheck && rowsCheck.length > 0) {
+        return res.status(400).json({ status: 'ERROR', mensaje: 'Ya existe una cuenta registrada con este correo electrónico.' });
+      }
+
+      // 2. Hashear contraseña
+      const rawPass = contrasena && contrasena.trim() !== '' ? contrasena.trim() : 'Admin123*';
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(rawPass, salt);
+
+      const sql = `
+        INSERT INTO registro_usuarios 
+        (nombre_usuario, edad, cedula, correo_electronico, contrasena, telefono, rol, email_verificado, pais, tipo_documento) 
+        VALUES (?, 30, ?, ?, ?, ?, 'admin', 1, 'Colombia', 'Cédula de ciudadanía')
+      `;
+
+      db.query(sql, [cleanNombre, cleanDoc, cleanCorreo, hashedPassword, telefono ? String(telefono).trim() : null], (err, result) => {
+        if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
+        res.json({ status: 'OK', mensaje: "Administrador creado exitosamente", id: result.insertId });
+      });
     });
   } catch (err) {
     res.status(500).json({ status: 'ERROR', mensaje: err.message });
@@ -74,34 +164,65 @@ exports.createAdministrador = async (req, res) => {
 
 exports.updateAdministrador = async (req, res) => {
   const { id } = req.params;
-  const { nombre, correo, telefono, contrasena } = req.body;
+  const { nombre, apellido, correo, telefono, contrasena } = req.body;
+
+  const cleanNombre = apellido && apellido.trim() !== ''
+    ? `${String(nombre).trim()} ${String(apellido).trim()}`
+    : (nombre ? String(nombre).trim() : '');
+
   try {
     if (contrasena && contrasena.trim() !== '') {
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(contrasena, salt);
+      const hashedPassword = await bcrypt.hash(contrasena.trim(), salt);
 
-      const sql = "UPDATE registro_usuarios SET nombre_usuario=?, correo_electronico=?, telefono=?, contrasena=? WHERE id_registro=? AND rol='admin'";
-      db.query(sql, [nombre, correo, telefono, hashedPassword, id], (err) => {
-        if (err) return res.status(500).json(err);
-        res.json({ mensaje: "Administrador actualizado con nueva contraseña" });
+      const sql = "UPDATE registro_usuarios SET nombre_usuario=COALESCE(NULLIF(?, ''), nombre_usuario), correo_electronico=?, telefono=?, contrasena=? WHERE id_registro=? AND rol='admin'";
+      db.query(sql, [cleanNombre, String(correo).trim().toLowerCase(), telefono || null, hashedPassword, id], (err) => {
+        if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
+        res.json({ status: 'OK', mensaje: "Administrador actualizado con nueva contraseña" });
       });
     } else {
-      const sql = "UPDATE registro_usuarios SET nombre_usuario=?, correo_electronico=?, telefono=? WHERE id_registro=? AND rol='admin'";
-      db.query(sql, [nombre, correo, telefono, id], (err) => {
-        if (err) return res.status(500).json(err);
-        res.json({ mensaje: "Administrador actualizado" });
+      const sql = "UPDATE registro_usuarios SET nombre_usuario=COALESCE(NULLIF(?, ''), nombre_usuario), correo_electronico=?, telefono=? WHERE id_registro=? AND rol='admin'";
+      db.query(sql, [cleanNombre, String(correo).trim().toLowerCase(), telefono || null, id], (err) => {
+        if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
+        res.json({ status: 'OK', mensaje: "Administrador actualizado correctamente" });
       });
     }
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ status: 'ERROR', mensaje: err.message });
   }
 };
 
 exports.deleteAdministrador = (req, res) => {
   const { id } = req.params;
-  db.query("UPDATE registro_usuarios SET rol = 'usuario' WHERE id_registro = ?", [id], (err) => {
-    if (err) return res.status(500).json(err);
-    res.json({ mensaje: "Administrador removido de su rol" });
+  const currentAdminId = req.admin?.id_registro || req.admin?.id;
+
+  // 1. Evitar que un administrador elimine o degrade su propia cuenta
+  if (currentAdminId && parseInt(id, 10) === parseInt(currentAdminId, 10)) {
+    return res.status(403).json({
+      status: 'ERROR',
+      mensaje: 'No puedes remover tu propia cuenta de Administrador para proteger el acceso al sistema.'
+    });
+  }
+
+  // 2. Verificar que no sea el único administrador del sistema
+  db.query("SELECT COUNT(*) AS total_admins FROM registro_usuarios WHERE rol = 'admin'", (errCount, countRes) => {
+    if (errCount) return res.status(500).json({ status: 'ERROR', mensaje: errCount.message });
+
+    const totalAdmins = countRes[0]?.total_admins || 0;
+    if (totalAdmins <= 1) {
+      return res.status(403).json({
+        status: 'ERROR',
+        mensaje: 'Acción bloqueada: No se puede eliminar el único administrador del sistema. Debe existir al menos un administrador activo.'
+      });
+    }
+
+    db.query("UPDATE registro_usuarios SET rol = 'usuario' WHERE id_registro = ? AND rol = 'admin'", [id], (err, result) => {
+      if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.message });
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ status: 'ERROR', mensaje: 'Administrador no encontrado.' });
+      }
+      res.json({ status: 'OK', mensaje: "Administrador removido de su rol exitosamente." });
+    });
   });
 };
 
@@ -220,6 +341,70 @@ exports.getReservasAdmin = (req, res) => {
   db.query(sql, (err, result) => {
     if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
     res.json(result);
+  });
+};
+
+exports.createReservaAdmin = (req, res) => {
+  const {
+    usuario_id,
+    lugar_id,
+    fecha,
+    hora,
+    numero_personas,
+    idioma,
+    metodo_pago,
+    precio_total,
+    estado,
+    estado_pago
+  } = req.body;
+
+  if (!usuario_id || !lugar_id || !fecha || !hora) {
+    return res.status(400).json({
+      status: 'ERROR',
+      mensaje: 'Usuario, Lugar turístico, Fecha y Hora son campos obligatorios.'
+    });
+  }
+
+  const uId = parseInt(usuario_id, 10);
+  const lId = parseInt(lugar_id, 10);
+  const numPers = parseInt(numero_personas, 10) || 1;
+  const fechaStr = String(fecha).substring(0, 10);
+  const horaStr = String(hora).trim();
+  const idiomaStr = (String(idioma).toLowerCase() === 'en') ? 'en' : 'es';
+  const metodoStr = (metodo_pago || 'nequi').toLowerCase();
+  const estadoStr = estado || 'confirmada';
+  const estadoPagoStr = estado_pago || 'pagado';
+  const precioTot = parseFloat(precio_total) || 100000;
+  const montoPag = (estadoPagoStr === 'pagado') ? precioTot : (estadoPagoStr === 'parcial' ? precioTot * 0.5 : 0);
+  const codigo = `RES-ADM-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  const sql = `
+    INSERT INTO reservas 
+    (usuario_id, lugar_id, fecha, hora, numero_personas, idioma, precio_total, metodo_pago, estado_pago, estado, codigo, monto_pagado)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(sql, [
+    uId,
+    lId,
+    fechaStr,
+    horaStr,
+    numPers,
+    idiomaStr,
+    precioTot,
+    metodoStr,
+    estadoPagoStr,
+    estadoStr,
+    codigo,
+    montoPag
+  ], (err, result) => {
+    if (err) return res.status(500).json({ status: 'ERROR', mensaje: err.sqlMessage || err.message });
+    res.json({
+      status: 'OK',
+      mensaje: 'Reserva registrada exitosamente por el administrador',
+      id: result.insertId,
+      codigo
+    });
   });
 };
 

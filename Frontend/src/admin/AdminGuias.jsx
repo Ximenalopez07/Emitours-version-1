@@ -13,7 +13,8 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaFileExcel,
-  FaFilePdf
+  FaFilePdf,
+  FaEye
 } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -38,6 +39,7 @@ export default function AdminGuias() {
   const [showModal, setShowModal] = useState(false);
   const [editingGuia, setEditingGuia] = useState(null);
   const [guiaToDelete, setGuiaToDelete] = useState(null);
+  const [selectedGuiaDetail, setSelectedGuiaDetail] = useState(null);
   const [alertMsg, setAlertMsg] = useState('');
 
   // Estructura exacta de la tabla guias:
@@ -319,6 +321,13 @@ export default function AdminGuias() {
                       <td>
                         <div className="table-actions-group">
                           <button
+                            className="table-btn-action view"
+                            onClick={() => setSelectedGuiaDetail(g)}
+                            title="Ver Información Completa"
+                          >
+                            <FaEye />
+                          </button>
+                          <button
                             className="table-btn-action edit"
                             onClick={() => handleOpenEdit(g)}
                             title="Editar Guía"
@@ -340,6 +349,68 @@ export default function AdminGuias() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* MODAL 1: VER INFORMACIÓN COMPLETA DEL GUÍA */}
+      {selectedGuiaDetail && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal-card user-detail-card">
+            <div className="detail-modal-header">
+              <div className="detail-avatar-container">
+                <img
+                  src={resolveGuiaPhoto(selectedGuiaDetail.foto, `${selectedGuiaDetail.nombre} ${selectedGuiaDetail.apellido}`)}
+                  alt={`${selectedGuiaDetail.nombre} ${selectedGuiaDetail.apellido}`}
+                  className="detail-avatar-lg"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300';
+                  }}
+                />
+              </div>
+              <div className="detail-title-info">
+                <h3>{selectedGuiaDetail.nombre} {selectedGuiaDetail.apellido}</h3>
+                <span className="detail-badge-id">Guía Turístico #{selectedGuiaDetail.id}</span>
+              </div>
+            </div>
+
+            <div className="detail-grid-data">
+              <div className="detail-field">
+                <label>Nombres</label>
+                <p>{selectedGuiaDetail.nombre}</p>
+              </div>
+              <div className="detail-field">
+                <label>Apellidos</label>
+                <p>{selectedGuiaDetail.apellido}</p>
+              </div>
+              <div className="detail-field">
+                <label>Teléfono de Contacto</label>
+                <p>{selectedGuiaDetail.telefono || 'No registrado'}</p>
+              </div>
+              <div className="detail-field">
+                <label>Correo Electrónico</label>
+                <p>{selectedGuiaDetail.correo}</p>
+              </div>
+              <div className="detail-field">
+                <label>Idiomas</label>
+                <p>{selectedGuiaDetail.idioma || 'Español'}</p>
+              </div>
+              <div className="detail-field">
+                <label>Estado en Sistema</label>
+                <p style={{ color: '#16a34a', fontWeight: '700' }}>Activo / Certificado</p>
+              </div>
+            </div>
+
+            <div className="modal-actions-end">
+              <button
+                className="btn-secondary-action"
+                onClick={() => setSelectedGuiaDetail(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

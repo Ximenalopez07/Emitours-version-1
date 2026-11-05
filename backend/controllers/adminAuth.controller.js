@@ -83,7 +83,7 @@ exports.login = (req, res) => {
       nombre: user.nombre_usuario,
       apellido: '',
       correo: user.correo_electronico,
-      rol: 'Super Administrador',
+      rol: 'admin',
       estado: 'Activo',
       foto: user.foto,
       telefono: user.telefono
@@ -120,7 +120,7 @@ exports.verifySession = (req, res) => {
         apellido: '',
         correo: u.correo_electronico,
         telefono: u.telefono,
-        rol: 'Super Administrador',
+        rol: 'admin',
         estado: 'Activo',
         foto: u.foto
       }

@@ -3,7 +3,7 @@ const router = express.Router();
 const adminAuth = require('../controllers/adminAuth.controller');
 const adminStats = require('../controllers/adminStats.controller');
 const adminCrud = require('../controllers/adminCrud.controller');
-const { verifyAdminToken, requireSuperAdmin } = require('../middlewares/authAdmin');
+const { verifyAdminToken } = require('../middlewares/authAdmin');
 
 // Rutas Públicas de Admin
 router.post('/auth/login', adminAuth.login);
@@ -20,14 +20,15 @@ router.get('/stats', adminStats.getDashboardStats);
 
 // Gestión de Usuarios (Clientes)
 router.get('/usuarios', adminCrud.getUsuarios);
+router.post('/usuarios', adminCrud.createUsuarioAdmin);
 router.put('/usuarios/:id', adminCrud.updateUsuarioAdmin);
 router.delete('/usuarios/:id', adminCrud.deleteUsuarioAdmin);
 
-// Gestión de Administradores (Super Admin requerido)
+// Gestión de Administradores (Rol unificado admin)
 router.get('/administradores', adminCrud.getAdministradores);
-router.post('/administradores', requireSuperAdmin, adminCrud.createAdministrador);
-router.put('/administradores/:id', requireSuperAdmin, adminCrud.updateAdministrador);
-router.delete('/administradores/:id', requireSuperAdmin, adminCrud.deleteAdministrador);
+router.post('/administradores', adminCrud.createAdministrador);
+router.put('/administradores/:id', adminCrud.updateAdministrador);
+router.delete('/administradores/:id', adminCrud.deleteAdministrador);
 
 // Gestión de Lugares
 router.get('/lugares', adminCrud.getLugaresAdmin);
@@ -49,6 +50,7 @@ router.delete('/categorias/:id', adminCrud.deleteCategoria);
 
 // Gestión de Reservas
 router.get('/reservas', adminCrud.getReservasAdmin);
+router.post('/reservas', adminCrud.createReservaAdmin);
 router.put('/reservas/:id/estado', adminCrud.updateReservaStatus);
 router.put('/reservas/:id', adminCrud.updateReservaAdmin);
 router.delete('/reservas/:id', adminCrud.deleteReservaAdmin);

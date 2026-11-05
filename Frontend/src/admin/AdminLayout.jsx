@@ -305,6 +305,11 @@ export default function AdminLayout() {
                 src={admin?.foto || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200"}
                 alt="Admin Avatar"
                 className="user-avatar"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200";
+                }}
               />
               <div className="user-details">
                 <span className="user-name">{admin?.nombre || 'Administrador'}</span>

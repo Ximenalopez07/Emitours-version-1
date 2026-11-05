@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   getAdminReservas,
+  createAdminReserva,
   updateAdminReservaStatus,
   updateAdminReserva,
-  deleteAdminReserva
+  deleteAdminReserva,
+  getAdminUsuarios,
+  getAdminLugares
 } from '../api';
 import {
   FaSearch,
@@ -27,7 +30,8 @@ import {
   FaGlobe,
   FaPhoneAlt,
   FaEnvelope,
-  FaTimesCircle
+  FaTimesCircle,
+  FaPlus
 } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -53,6 +57,22 @@ export default function AdminReservas() {
   }, [searchParams]);
 
   // Modales
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    usuario_id: '',
+    lugar_id: '',
+    fecha: new Date().toISOString().substring(0, 10),
+    hora: '08:00:00',
+    numero_personas: 1,
+    idioma: 'es',
+    metodo_pago: 'nequi',
+    estado: 'confirmada',
+    estado_pago: 'pagado',
+    precio_total: 100000
+  });
+  const [usuariosList, setUsuariosList] = useState([]);
+  const [lugaresList, setLugaresList] = useState([]);
+
   const [selectedReservaDetail, setSelectedReservaDetail] = useState(null);
   const [editingReserva, setEditingReserva] = useState(null);
   const [payingReserva, setPayingReserva] = useState(null);
@@ -72,6 +92,47 @@ export default function AdminReservas() {
     estado_pago: 'pendiente',
     estado: 'pendiente'
   });
+
+  const handleOpenCreate = async () => {
+    try {
+      const [resUsers, resLug] = await Promise.all([getAdminUsuarios(), getAdminLugares()]);
+      const usersData = resUsers.data || [];
+      const lugData = resLug.data || [];
+      setUsuariosList(usersData);
+      setLugaresList(lugData);
+      setCreateFormData({
+        usuario_id: usersData[0]?.id_registro || '',
+        lugar_id: lugData[0]?.id || '',
+        fecha: new Date().toISOString().substring(0, 10),
+        hora: '08:00:00',
+        numero_personas: 1,
+        idioma: 'es',
+        metodo_pago: 'nequi',
+        estado: 'confirmada',
+        estado_pago: 'pagado',
+        precio_total: 100000
+      });
+      setShowCreateModal(true);
+    } catch (err) {
+      console.error("Error al cargar datos para crear reserva:", err);
+    }
+  };
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!createFormData.usuario_id || !createFormData.lugar_id) {
+      alert('Por favor selecciona un cliente y un tour.');
+      return;
+    }
+    try {
+      const res = await createAdminReserva(createFormData);
+      showNotification(res.data?.mensaje || '✅ Reserva registrada exitosamente');
+      setShowCreateModal(false);
+      loadData();
+    } catch (err) {
+      alert(err.response?.data?.mensaje || 'Error al registrar la reserva');
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -332,6 +393,9 @@ export default function AdminReservas() {
           </button>
           <button className="btn-export-file pdf" onClick={exportPDF} title="Exportar a PDF">
             <FaFilePdf /> Exportar PDF
+          </button>
+          <button className="btn-primary-action" onClick={handleOpenCreate} title="Registrar Nueva Reserva">
+            <FaPlus /> Nueva Reserva
           </button>
         </div>
       </div>
@@ -1135,6 +1199,178 @@ export default function AdminReservas() {
                 Sí, Eliminar Reserva
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6: CREAR NUEVA RESERVA DIRECTA (ADMINISTRACIÓN) */}
+      {showCreateModal && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal-card" style={{ maxWidth: '600px' }}>
+            <h3>Registrar Nueva Reserva</h3>
+            <p className="modal-subtitle">Ingresa los datos para agendar una nueva reserva directamente en el sistema</p>
+
+            <form onSubmit={handleCreateSubmit} className="admin-modal-form">
+              <div className="form-group-field">
+                <label>Cliente Asignado *</label>
+                <select
+                  required
+                  value={createFormData.usuario_id}
+                  onChange={(e) => setCreateFormData({ ...createFormData, usuario_id: e.target.value })}
+                >
+                  <option value="">-- Selecciona un cliente --</option>
+                  {usuariosList.map((u) => (
+                    <option key={u.id_registro} value={u.id_registro}>
+                      {u.nombre_usuario} ({u.correo_electronico}) - Doc: {u.cedula || 'S/D'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group-field">
+                <label>Tour / Destino Turístico *</label>
+                <select
+                  required
+                  value={createFormData.lugar_id}
+                  onChange={(e) => setCreateFormData({ ...createFormData, lugar_id: e.target.value })}
+                >
+                  <option value="">-- Selecciona un tour --</option>
+                  {lugaresList.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>Fecha del Tour *</label>
+                  <input
+                    type="date"
+                    required
+                    value={createFormData.fecha}
+                    onChange={(e) => setCreateFormData({ ...createFormData, fecha: e.target.value })}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label>Hora de Salida *</label>
+                  <select
+                    required
+                    value={createFormData.hora}
+                    onChange={(e) => setCreateFormData({ ...createFormData, hora: e.target.value })}
+                  >
+                    <option value="07:00:00">07:00 AM</option>
+                    <option value="07:30:00">07:30 AM</option>
+                    <option value="08:00:00">08:00 AM</option>
+                    <option value="08:30:00">08:30 AM</option>
+                    <option value="09:00:00">09:00 AM</option>
+                    <option value="09:30:00">09:30 AM</option>
+                    <option value="10:00:00">10:00 AM</option>
+                    <option value="10:30:00">10:30 AM</option>
+                    <option value="11:00:00">11:00 AM</option>
+                    <option value="11:30:00">11:30 AM</option>
+                    <option value="12:00:00">12:00 PM</option>
+                    <option value="12:30:00">12:30 PM</option>
+                    <option value="13:00:00">01:00 PM</option>
+                    <option value="13:30:00">01:30 PM</option>
+                    <option value="14:00:00">02:00 PM</option>
+                    <option value="14:30:00">02:30 PM</option>
+                    <option value="15:00:00">03:00 PM</option>
+                    <option value="15:30:00">03:30 PM</option>
+                    <option value="16:00:00">04:00 PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>Número de Personas</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    required
+                    value={createFormData.numero_personas}
+                    onChange={(e) => setCreateFormData({ ...createFormData, numero_personas: parseInt(e.target.value, 10) || 1 })}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label>Idioma del Tour</label>
+                  <select
+                    value={createFormData.idioma}
+                    onChange={(e) => setCreateFormData({ ...createFormData, idioma: e.target.value })}
+                  >
+                    <option value="es">Español</option>
+                    <option value="en">Inglés</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>Método de Pago</label>
+                  <select
+                    value={createFormData.metodo_pago}
+                    onChange={(e) => setCreateFormData({ ...createFormData, metodo_pago: e.target.value })}
+                  >
+                    <option value="nequi">Nequi</option>
+                    <option value="pse">PSE</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="datafono">Datáfono</option>
+                    <option value="mercadopago">Mercado Pago</option>
+                  </select>
+                </div>
+                <div className="form-group-field">
+                  <label>Precio Total (COP)</label>
+                  <input
+                    type="number"
+                    step="1000"
+                    min="10000"
+                    required
+                    value={createFormData.precio_total}
+                    onChange={(e) => setCreateFormData({ ...createFormData, precio_total: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group-field">
+                  <label>Estado de Reserva</label>
+                  <select
+                    value={createFormData.estado}
+                    onChange={(e) => setCreateFormData({ ...createFormData, estado: e.target.value })}
+                  >
+                    <option value="confirmada">Confirmada</option>
+                    <option value="pendiente">Pendiente</option>
+                  </select>
+                </div>
+                <div className="form-group-field">
+                  <label>Estado de Pago</label>
+                  <select
+                    value={createFormData.estado_pago}
+                    onChange={(e) => setCreateFormData({ ...createFormData, estado_pago: e.target.value })}
+                  >
+                    <option value="pagado">Pagado (100%)</option>
+                    <option value="parcial">Parcial (50%)</option>
+                    <option value="pendiente">Pendiente (0%)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-actions-end">
+                <button
+                  type="button"
+                  className="btn-secondary-action"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary-action">
+                  <FaPlus /> Guardar Reserva
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
