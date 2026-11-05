@@ -65,7 +65,7 @@ export default function AdminReservas() {
     hora: '08:00:00',
     numero_personas: 1,
     idioma: 'es',
-    metodo_pago: 'nequi',
+    metodo_pago: 'mercadopago',
     estado: 'confirmada',
     estado_pago: 'pagado',
     precio_total: 100000
@@ -88,7 +88,7 @@ export default function AdminReservas() {
     numero_personas: 1,
     idioma: 'es',
     precio_total: 0,
-    metodo_pago: 'pse',
+    metodo_pago: 'mercadopago',
     estado_pago: 'pendiente',
     estado: 'pendiente'
   });
@@ -107,7 +107,7 @@ export default function AdminReservas() {
         hora: '08:00:00',
         numero_personas: 1,
         idioma: 'es',
-        metodo_pago: 'nequi',
+        metodo_pago: 'mercadopago',
         estado: 'confirmada',
         estado_pago: 'pagado',
         precio_total: 100000
@@ -258,7 +258,7 @@ export default function AdminReservas() {
       numero_personas: reserva.numero_personas || 1,
       idioma: reserva.idioma || 'es',
       precio_total: reserva.precio_total || 0,
-      metodo_pago: reserva.metodo_pago || 'pse',
+      metodo_pago: reserva.metodo_pago || 'mercadopago',
       estado_pago: reserva.estado_pago || 'pendiente',
       estado: reserva.estado || 'pendiente'
     });
@@ -1112,10 +1112,7 @@ export default function AdminReservas() {
                     value={editFormData.metodo_pago}
                     onChange={(e) => setEditFormData({ ...editFormData, metodo_pago: e.target.value })}
                   >
-                    <option value="pse">PSE</option>
-                    <option value="nequi">Nequi</option>
-                    <option value="efectivo">Efectivo</option>
-                    <option value="datafono">Datáfono</option>
+                    <option value="mercadopago">Mercado Pago</option>
                   </select>
                 </div>
               </div>
@@ -1314,10 +1311,6 @@ export default function AdminReservas() {
                     value={createFormData.metodo_pago}
                     onChange={(e) => setCreateFormData({ ...createFormData, metodo_pago: e.target.value })}
                   >
-                    <option value="nequi">Nequi</option>
-                    <option value="pse">PSE</option>
-                    <option value="efectivo">Efectivo</option>
-                    <option value="datafono">Datáfono</option>
                     <option value="mercadopago">Mercado Pago</option>
                   </select>
                 </div>
