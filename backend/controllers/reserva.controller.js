@@ -29,15 +29,8 @@ function formatTimeToSql(hStr) {
   return '07:00:00';
 }
 
-// Normalizar método de pago al enum ('nequi', 'pse', 'efectivo', 'datafono', 'mercadopago')
+// Normalizar método de pago: EmiTours maneja exclusivamente 'mercadopago'
 function normalizeMetodoPago(mp) {
-  if (!mp) return 'mercadopago';
-  const val = String(mp).toLowerCase();
-  if (val.includes('mercado') || val.includes('mp')) return 'mercadopago';
-  if (val.includes('nequi')) return 'nequi';
-  if (val.includes('pse')) return 'pse';
-  if (val.includes('efectivo')) return 'efectivo';
-  if (val.includes('dataf') || val.includes('datáf')) return 'datafono';
   return 'mercadopago';
 }
 
