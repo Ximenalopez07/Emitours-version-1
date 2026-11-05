@@ -19,10 +19,6 @@ export const updateReserva = (id, reservaData) => api.put(`/reservas/${id}`, res
 export const deleteReserva = (id) => api.delete(`/reservas/${id}`);
 export const cancelarReserva = (id) => api.put(`/reservas/${id}/cancelar`);
 
-export const enviarContacto = (contactoData) => api.post('/contacto', contactoData);
-export const getAdminContacto = () => api.get('/contacto/admin');
-export const responderAdminContacto = (id, data) => api.put(`/contacto/admin/${id}/responder`, data);
-
 export const enviarMensajeChatbot = (mensajeData) => api.post('/chatbot/message', mensajeData);
 export const getAdminChatbotHistory = () => api.get('/chatbot/admin/history');
 
