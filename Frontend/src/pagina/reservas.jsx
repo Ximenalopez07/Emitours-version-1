@@ -11,8 +11,8 @@ import {
 import { translations } from "../utils/translations";
 import "./reservas.css";
 
-// MÉTODOS DE PAGO PERMITIDOS (ÚNICAMENTE NEQUI Y PSE)
-const METODOS_PAGO_PERMITIDOS = ['Nequi', 'PSE'];
+// MÉTODOS DE PAGO PERMITIDOS (mercado pago)
+const METODOS_PAGO_PERMITIDOS = ['mercadopago'];
 
 // LISTADO DE HORARIOS EN INTERVALOS DE 30 MINUTOS (07:00 AM - 04:00 PM)
 const HORARIOS_DISPONIBLES = [
